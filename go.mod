@@ -1,4 +1,4 @@
-module github.com/bkohler93/my-helper
+module github.com/bkohler93/myhelper
 
 go 1.24.2
 

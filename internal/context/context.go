@@ -5,11 +5,11 @@ import (
 	"os"
 )
 
-// LoadContext reads context.md from the current working directory.
+// LoadContext reads .myhelper/context.md from the current working directory.
 // Returns the file contents if the file exists, or an empty string if absent.
 // Any error other than file-not-found is returned to the caller.
 func LoadContext() (string, error) {
-	data, err := os.ReadFile("context.md")
+	data, err := os.ReadFile(".myhelper/context.md")
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
 			return "", nil

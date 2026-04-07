@@ -10,7 +10,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/bkohler93/my-helper/internal/config"
+	"github.com/bkohler93/myhelper/internal/config"
 )
 
 type generateRequest struct {

@@ -1,9 +1,9 @@
 package cmd
 
 import (
-	"github.com/bkohler93/my-helper/internal/config"
-	appctx "github.com/bkohler93/my-helper/internal/context"
-	"github.com/bkohler93/my-helper/internal/ollama"
+	"github.com/bkohler93/myhelper/internal/config"
+	appctx "github.com/bkohler93/myhelper/internal/context"
+	"github.com/bkohler93/myhelper/internal/ollama"
 	"github.com/spf13/cobra"
 )
 

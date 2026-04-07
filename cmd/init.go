@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"os"
 
@@ -27,7 +28,29 @@ func init() {
 }
 
 func runInit(cmd *cobra.Command, args []string) error {
-	const filename = "context.md"
+	dirPath := ".myhelper"
+
+	info, err := os.Stat(dirPath)
+	if err != nil {
+		var isCreated bool
+		if os.IsNotExist(err) {
+			fmt.Println("Directory does not exist")
+			err = os.MkdirAll(dirPath, 0755)
+			if err != nil {
+				return err
+			}
+			isCreated = true
+		} else {
+			fmt.Println("Error accessing path:", err)
+		}
+		if !isCreated {
+			return err
+		}
+	} else if !info.IsDir() {
+		return errors.New("path exists but is a file, not a directory")
+	}
+
+	const filename = ".myhelper/context.md"
 
 	if _, err := os.Stat(filename); err == nil {
 		fmt.Fprintf(cmd.OutOrStdout(), "%s already exists — not overwriting. Edit it directly.\n", filename)
