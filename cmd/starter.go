@@ -9,7 +9,7 @@ import (
 
 // starterSystemPrompt is the focused system prompt for the starter command.
 // The actual prompt text is defined in Plan 1.4.
-const starterSystemPrompt = "TODO: replace in Plan 1.4"
+const starterSystemPrompt = "You are a Go coding assistant. Write the minimal working Go code that accomplishes the following task. Include only what is necessary — no boilerplate, no extra explanation. Output only the code block."
 
 var starterCmd = &cobra.Command{
 	Use:   "starter <task>",

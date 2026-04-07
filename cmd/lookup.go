@@ -9,7 +9,7 @@ import (
 
 // lookupSystemPrompt is the focused system prompt for the lookup command.
 // The actual prompt text is defined in Plan 1.4.
-const lookupSystemPrompt = "TODO: replace in Plan 1.4"
+const lookupSystemPrompt = "You are a Go expert. Recommend the best standard library package, or well-known third-party library, for the following task. State the package name, import path, and one sentence on why it fits. Be direct and concise."
 
 var lookupCmd = &cobra.Command{
 	Use:   "lookup <question>",

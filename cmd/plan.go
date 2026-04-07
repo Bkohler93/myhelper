@@ -9,7 +9,7 @@ import (
 
 // planSystemPrompt is the focused system prompt for the plan command.
 // The actual prompt text is defined in Plan 1.4.
-const planSystemPrompt = "TODO: replace in Plan 1.4"
+const planSystemPrompt = "You are a Go software planning assistant. Break the following feature or task into a short, ordered list of concrete subtasks. Each subtask should be one clear action. Output only the numbered list, no preamble."
 
 var planCmd = &cobra.Command{
 	Use:   "plan <description>",

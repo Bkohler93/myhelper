@@ -9,7 +9,7 @@ import (
 
 // patternSystemPrompt is the focused system prompt for the pattern command.
 // The actual prompt text is defined in Plan 1.4.
-const patternSystemPrompt = "TODO: replace in Plan 1.4"
+const patternSystemPrompt = "You are a Go expert. Describe the idiomatic Go way to implement or structure the following. Be concise: focus on the key pattern, naming conventions, and any common pitfalls. No code unless a short snippet is essential."
 
 var patternCmd = &cobra.Command{
 	Use:   "pattern <topic>",
