@@ -2,7 +2,7 @@
 
 ## What This Is
 
-A Go CLI tool for Go developers that offloads common coding micro-tasks to a locally-hosted LLM (Ollama + qwen2.5-coder:7b). It answers four focused questions — how to break down a feature, which library/API to use, what minimal working code looks like, and what the idiomatic pattern is — using project-specific context to keep responses relevant and tight.
+A Go CLI tool for Go developers that offloads common coding micro-tasks to a locally-hosted LLM (Ollama + qwen2.5-coder:7b). Five focused subcommands — `init`, `plan`, `lookup`, `starter`, `pattern` — give context-aware answers scoped to the current project via `context.md`, with streaming output and no external API dependencies. v1.0 shipped 2026-04-07.
 
 ## Core Value
 
@@ -12,19 +12,19 @@ Get a useful, context-aware answer from the local model in one command, without 
 
 ### Validated
 
-(None yet — ship to validate)
+- ✓ `init` command — writes a blank `context.md` template to the current directory — v1.0
+- ✓ `plan` command — breaks a feature/task description into ordered subtasks — v1.0
+- ✓ `lookup` command — recommends the right API or library for a given step — v1.0
+- ✓ `starter` command — prints minimal working Go code for a given task — v1.0
+- ✓ `pattern` command — describes the idiomatic Go way to write or structure something — v1.0
+- ✓ All commands accept input as a CLI argument; prompt interactively if argument is omitted — v1.0
+- ✓ All commands stream model output to stdout as tokens arrive — v1.0
+- ✓ `context.md` in the current directory is read and prepended to every prompt — v1.0
+- ✓ Ollama endpoint and model are configurable (default: `192.168.0.9:11434`, `qwen2.5-coder:7b`) — v1.0
 
 ### Active
 
-- [ ] `init` command — writes a blank `context.md` template to the current directory; user fills it in manually
-- [ ] `plan` command — breaks a feature/task description into ordered subtasks
-- [ ] `lookup` command — recommends the right API or library for a given step
-- [ ] `starter` command — prints minimal working Go code for a given task (user edits after)
-- [ ] `pattern` command — describes the idiomatic Go way to write or structure something
-- [ ] All commands accept the input as a CLI argument or prompt for it interactively if omitted
-- [ ] All commands stream model output to stdout as tokens arrive
-- [ ] `context.md` in the current directory is read and prepended to every prompt to scope the model
-- [ ] Ollama endpoint and model are configurable (default: `192.168.0.9:11434`, `qwen2.5-coder:7b`)
+(None — ship v1.0 first, then define v1.1 scope via `/gsd:new-milestone`)
 
 ### Out of Scope
 
@@ -40,7 +40,8 @@ Get a useful, context-aware answer from the local model in one command, without 
 - **Model constraint**: ~8k context window — prompts must be short and factual; system prompt + context.md + user query must fit comfortably
 - **User workflow**: Developer runs the tool from within a Go project directory; `context.md` at the project root scopes the model's responses to that project's stack and patterns
 - **Primary use case**: Solo developer productivity tool; no multi-user, auth, or network exposure concerns
-- **Existing codebase**: Repo already has some code — skipping codebase map, initializing fresh project scope
+- **Codebase state**: ~488 LOC Go, cobra CLI framework, single binary output
+- **Tech stack**: Go, cobra, bufio scanner for NDJSON streaming, config from file/env/defaults
 
 ## Constraints
 
@@ -54,10 +55,16 @@ Get a useful, context-aware answer from the local model in one command, without 
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| context.md is a pure template (no auto-detect) | Keeps init simple and fast; user knows their stack better than heuristics do | — Pending |
-| Per-directory context.md only | Avoids cross-project bleed; forces explicit initialization per project | — Pending |
-| Stream output as tokens arrive | Model is slow enough that streaming feels faster; matches developer expectation from tools like Ollama CLI | — Pending |
-| Single-shot prompts (no history) | Preserves context window budget; each command is self-contained | — Pending |
+| context.md is a pure template (no auto-detect) | Keeps init simple and fast; user knows their stack better than heuristics do | ✓ Good — init is instant and predictable |
+| Per-directory context.md only | Avoids cross-project bleed; forces explicit initialization per project | ✓ Good — clear mental model |
+| Stream output as tokens arrive (bufio.Scanner over NDJSON) | Model is slow enough that streaming feels faster; matches developer expectation | ✓ Good — token-by-token via os.Stdout |
+| Single-shot prompts (no history) | Preserves context window budget; each command is self-contained | ✓ Good — well within 8k budget |
+| cobra for CLI framework | Standard Go CLI library; enables subcommands cleanly | ✓ Good |
+| Config precedence: env > .myhelper.json (CWD) > ~/.config/myhelper/config.json > defaults | Flexible override without requiring config files | ✓ Good |
+| Interactive prompts written to stderr | Keeps stdout clean for streamed model output | ✓ Good |
+| System prompts kept under 230 chars each | Well within 8k context budget | ✓ Good — leaves room for context.md |
+| Binary artifact added to .gitignore | Build artifact not committed | ✓ Good |
+| Package alias `stdctx` for stdlib context | `context` package name shadows stdlib; alias avoids confusion | ✓ Good — documented for future contributors |
 
 ## Evolution
 
@@ -77,4 +84,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-07 after initialization*
+*Last updated: 2026-04-07 after v1.0 milestone*
