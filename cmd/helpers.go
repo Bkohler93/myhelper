@@ -25,9 +25,10 @@ func readInteractive(prompt string) (string, error) {
 	return input, nil
 }
 
-// buildPrompt composes the full prompt from optional project context,
-// a command-specific system prompt, and the user's input.
-func buildPrompt(projectContext, systemPrompt, userInput string) string {
+// buildSystemMessage composes the system message content from optional project
+// context and the command-specific system prompt. In the /api/chat model,
+// this becomes the Content field of the system message at messages[0].
+func buildSystemMessage(projectContext, systemPrompt string) string {
 	var sb strings.Builder
 	if projectContext != "" {
 		sb.WriteString("Project context:\n")
@@ -35,8 +36,6 @@ func buildPrompt(projectContext, systemPrompt, userInput string) string {
 		sb.WriteString("\n\n")
 	}
 	sb.WriteString(systemPrompt)
-	sb.WriteString("\n\n")
-	sb.WriteString(userInput)
 	return sb.String()
 }
 

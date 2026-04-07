@@ -3,6 +3,7 @@ package cmd
 import (
 	"github.com/bkohler93/myhelper/internal/config"
 	appctx "github.com/bkohler93/myhelper/internal/context"
+	"github.com/bkohler93/myhelper/internal/history"
 	"github.com/bkohler93/myhelper/internal/ollama"
 	"github.com/spf13/cobra"
 )
@@ -34,6 +35,10 @@ func runPattern(cmd *cobra.Command, args []string) error {
 	}
 
 	cfg := config.Load()
-	prompt := buildPrompt(projectCtx, patternSystemPrompt, input)
-	return ollama.StreamPrompt(cfg, prompt)
+	messages := []history.Message{
+		{Role: "system", Content: buildSystemMessage(projectCtx, patternSystemPrompt)},
+		{Role: "user", Content: input},
+	}
+	_, err = ollama.StreamChat(cfg, messages)
+	return err
 }
