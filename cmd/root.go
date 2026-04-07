@@ -8,9 +8,10 @@ import (
 )
 
 var rootCmd = &cobra.Command{
-	Use:   "myhelper",
-	Short: "A focused Go coding assistant backed by a local Ollama model",
-	Long:  "myhelper sends focused prompts to a local Ollama server and streams responses to stdout.",
+	Use:                   "myhelper",
+	Short:                 "A focused Go coding assistant backed by a local Ollama model",
+	Long:                  "myhelper sends focused prompts to a local Ollama server and streams responses to stdout.",
+	CompletionOptions:     cobra.CompletionOptions{DisableDefaultCmd: true},
 }
 
 func Execute() {
