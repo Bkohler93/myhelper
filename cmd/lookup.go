@@ -12,6 +12,10 @@ import (
 // The actual prompt text is defined in Plan 1.4.
 const lookupSystemPrompt = "You are a Go expert. Recommend the best standard library package, or well-known third-party library, for the following task. State the package name, import path, and one sentence on why it fits. Be direct and concise."
 
+const lookupSummarizePrompt = "Summarize the API and library choices, their import paths, and the rationale for each selection discussed above into a concise technical summary."
+
+const lookupRecondensePrompt = "Given the following summary of past events and these new interactions, create an updated, comprehensive summary that preserves all API/library choices and the rationale behind each selection."
+
 var lookupCmd = &cobra.Command{
 	Use:   "lookup <question>",
 	Short: "Recommend the right Go API or library for a task",

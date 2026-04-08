@@ -12,6 +12,10 @@ import (
 // The actual prompt text is defined in Plan 1.4.
 const planSystemPrompt = "You are a Go software planning assistant. Break the following feature or task into a short, ordered list of concrete subtasks. Each subtask should be one clear action. Output only the numbered list, no preamble."
 
+const planSummarizePrompt = "Summarize the key decisions, ordered subtasks, and any blockers discussed above into a concise technical summary."
+
+const planRecondensePrompt = "Given the following summary of past events and these new interactions, create an updated, comprehensive summary that preserves all subtasks, ordered decisions, and blockers relevant to the plan."
+
 var planCmd = &cobra.Command{
 	Use:   "plan <description>",
 	Short: "Break a feature or task into ordered subtasks",

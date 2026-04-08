@@ -12,6 +12,10 @@ import (
 // The actual prompt text is defined in Plan 1.4.
 const patternSystemPrompt = "You are a Go expert. Describe the idiomatic Go way to implement or structure the following. Be concise: focus on the key pattern, naming conventions, and any common pitfalls. No code unless a short snippet is essential."
 
+const patternSummarizePrompt = "Summarize the idiomatic Go pattern identified, its constraints, and any pitfalls discussed above into a concise technical summary."
+
+const patternRecondensePrompt = "Given the following summary of past events and these new interactions, create an updated, comprehensive summary that preserves the idiomatic pattern identified and all its constraints."
+
 var patternCmd = &cobra.Command{
 	Use:   "pattern <topic>",
 	Short: "Describe the idiomatic Go way to structure or write something",

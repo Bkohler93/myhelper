@@ -12,6 +12,10 @@ import (
 // The actual prompt text is defined in Plan 1.4.
 const starterSystemPrompt = "You are a Go coding assistant. Write the minimal working Go code that accomplishes the following task. Include only what is necessary — no boilerplate, no extra explanation. Output only the code block."
 
+const starterSummarizePrompt = "Summarize the code structures, patterns chosen, and any constraints identified above into a concise technical summary."
+
+const starterRecondensePrompt = "Given the following summary of past events and these new interactions, create an updated, comprehensive summary that preserves all code structure decisions and patterns chosen."
+
 var starterCmd = &cobra.Command{
 	Use:   "starter <task>",
 	Short: "Print minimal working Go code for a given task",
