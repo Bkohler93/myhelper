@@ -366,7 +366,10 @@ func buildInjectedMessages(root, query string, cfg config.Config, chatFn scanner
 		return nil, fmt.Errorf("buildInjectedMessages: read index: %w", err)
 	}
 
-	indexJSON, _ := json.Marshal(idx)
+	indexJSON, err := json.Marshal(idx)
+	if err != nil {
+		return injectSummaries(root, query)
+	}
 	systemPrompt := pass1BaseSystemPrompt
 	if focus != "" {
 		systemPrompt += "\n" + focus
@@ -437,9 +440,11 @@ func buildInjectedMessages(root, query string, cfg config.Config, chatFn scanner
 				usedTokens += sigTokens
 				continue
 			}
+			// Symbol block also doesn't fit — budget truly exhausted.
+			break
 		}
-		// Budget exhausted — stop adding files.
-		break
+		// File not in index or has no symbols — skip this file but keep trying others.
+		continue
 	}
 
 	sb.WriteString(query)
