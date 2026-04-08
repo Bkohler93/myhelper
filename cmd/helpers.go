@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"syscall"
 	"time"
@@ -347,6 +348,110 @@ func injectSummaries(root, query string) ([]history.Message, error) {
 	return []history.Message{{Role: "user", Content: sb.String()}}, nil
 }
 
+// microPassRe matches "N-M" line range responses from the micro-pass LLM call.
+var microPassRe = regexp.MustCompile(`(\d+)-(\d+)`)
+
+// microPassFile asks the model which line range of an oversized file is needed
+// to answer the query, then extracts and returns those lines.
+//
+// Fallback chain (per D-10):
+//  1. Build symbol map via scanner.ExtractSymbolMap.
+//  2. Call chatFn with symbol map + query; parse "N-M" response.
+//  3. If parse succeeds and extracted range fits budget: return extracted lines.
+//  4. Otherwise: truncate raw content at last newline that fits budget.
+//  5. If even truncated content doesn't fit: return ("", false).
+//
+// Never panics. Never surfaces an error to the user (per D-06, D-09).
+// root is the project root; path is relative to root.
+func microPassFile(root, path, query string, cfg config.Config, chatFn scanner.ChatFn, budget int) (string, bool) {
+	if budget <= 0 {
+		return "", false
+	}
+
+	absPath := filepath.Join(root, path)
+	rawBytes, err := os.ReadFile(absPath)
+	if err != nil {
+		return "", false
+	}
+	rawContent := string(rawBytes)
+	lines := strings.Split(rawContent, "\n")
+	totalLines := len(lines)
+
+	// Attempt micro-pass: build symbol map and ask the model for a line range.
+	extracted, ok := func() (string, bool) {
+		symbols, err := scanner.ExtractSymbolMap(absPath)
+		if err != nil {
+			return "", false
+		}
+
+		// Build symbol map text (D-01, D-02).
+		var mapSB strings.Builder
+		for _, sym := range symbols {
+			fmt.Fprintf(&mapSB, "%s: lines %d-%d\n", sym.Name, sym.Start, sym.End)
+		}
+
+		// Compose micro-pass messages (D-03, D-04).
+		systemPrompt := "Given this file's symbol map, output ONLY the line range needed to answer the user's request. Format: start-end (e.g., 12-55). Output nothing else."
+		userMsg := fmt.Sprintf("Symbols in %s:\n%s\nUser request: %s", path, mapSB.String(), query)
+		microMessages := []history.Message{
+			{Role: "system", Content: systemPrompt},
+			{Role: "user", Content: userMsg},
+		}
+
+		resp, err := chatFn(cfg, microMessages)
+		if err != nil {
+			return "", false
+		}
+
+		// Parse "N-M" response (D-05).
+		m := microPassRe.FindStringSubmatch(strings.TrimSpace(resp))
+		if m == nil {
+			return "", false
+		}
+		var start, end int
+		fmt.Sscanf(m[1], "%d", &start)
+		fmt.Sscanf(m[2], "%d", &end)
+
+		// Clamp out-of-bounds (D-07).
+		if start < 1 {
+			start = 1
+		}
+		if end > totalLines {
+			end = totalLines
+		}
+		// On invalid range after clamping, fall through to truncation (D-06).
+		if start > end {
+			return "", false
+		}
+
+		// Extract lines [start, end] inclusive (0-indexed slice, 1-indexed line numbers).
+		extracted := strings.Join(lines[start-1:end], "\n")
+		tokCount := history.New(cfg.TokenThreshold, []history.Message{{Role: "user", Content: extracted}}).TokenCount()
+		if tokCount > budget {
+			return "", false
+		}
+		return extracted, true
+	}()
+
+	if ok {
+		return extracted, true
+	}
+
+	// Truncation fallback (D-08): scan from right for last newline that fits.
+	for i := len(rawContent) - 1; i >= 0; i-- {
+		if rawContent[i] == '\n' {
+			prefix := rawContent[:i+1]
+			tokCount := history.New(cfg.TokenThreshold, []history.Message{{Role: "user", Content: prefix}}).TokenCount()
+			if tokCount <= budget {
+				return prefix, true
+			}
+		}
+	}
+
+	// D-09: even a single line doesn't fit — skip this file.
+	return "", false
+}
+
 // buildInjectedMessages performs two-pass context injection:
 //  1. Pass 1: calls chatFn with the project index to select relevant files (max 3).
 //  2. Validates each returned path with os.Stat; discards invalid paths.
@@ -402,12 +507,6 @@ func buildInjectedMessages(root, query string, cfg config.Config, chatFn scanner
 	budget := int(float64(cfg.TokenThreshold) * 0.80)
 	usedTokens := 0
 
-	// Build a lookup map from path to FileEntry for symbol fallback.
-	entryByPath := make(map[string]scanner.FileEntry, len(idx.Files))
-	for _, fe := range idx.Files {
-		entryByPath[fe.Path] = fe
-	}
-
 	var sb strings.Builder
 	sb.WriteString("Here is the relevant source code for context:\n")
 
@@ -424,27 +523,12 @@ func buildInjectedMessages(root, query string, cfg config.Config, chatFn scanner
 			continue
 		}
 
-		// Raw content too large — fall back to symbol block.
-		if fe, ok := entryByPath[path]; ok && (len(fe.ExportedSymbols) > 0 || len(fe.UnexportedSymbols) > 0) {
-			var sigParts []string
-			if len(fe.ExportedSymbols) > 0 {
-				sigParts = append(sigParts, "// Exported: "+strings.Join(fe.ExportedSymbols, ", "))
-			}
-			if len(fe.UnexportedSymbols) > 0 {
-				sigParts = append(sigParts, "// Unexported: "+strings.Join(fe.UnexportedSymbols, ", "))
-			}
-			sigContent := strings.Join(sigParts, "\n")
-			sigTokens := history.New(cfg.TokenThreshold, []history.Message{{Role: "user", Content: sigContent}}).TokenCount()
-			if usedTokens+sigTokens <= budget {
-				sb.WriteString("File: " + path + " (signatures only)\n```go\n" + sigContent + "\n```\n")
-				usedTokens += sigTokens
-				continue
-			}
-			// Symbol block also doesn't fit — budget truly exhausted.
-			break
+		// Raw content too large — attempt micro-pass, then truncation (D-10, D-11).
+		if content, ok := microPassFile(root, path, query, cfg, chatFn, budget-usedTokens); ok {
+			sb.WriteString("File: " + path + " (partial)\n```go\n" + content + "\n```\n")
+			usedTokens += history.New(cfg.TokenThreshold, []history.Message{{Role: "user", Content: content}}).TokenCount()
 		}
-		// File not in index or has no symbols — skip this file but keep trying others.
-		continue
+		// If microPassFile returns false, skip this file silently (D-09).
 	}
 
 	sb.WriteString(query)
