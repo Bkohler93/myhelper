@@ -39,6 +39,11 @@ func runPattern(cmd *cobra.Command, args []string) error {
 		{Role: "system", Content: buildSystemMessage(projectCtx, patternSystemPrompt)},
 		{Role: "user", Content: input},
 	}
-	_, err = ollama.StreamChat(cfg, messages)
+	hist := history.New(cfg.TokenThreshold, messages)
+	err = initiateConversation(cfg, hist, ollama.StreamChat)
+	if err != nil {
+		return err
+	}
+	err = runConversationLoop(cfg, hist, ollama.StreamChat)
 	return err
 }

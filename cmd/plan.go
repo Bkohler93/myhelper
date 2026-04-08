@@ -39,6 +39,12 @@ func runPlan(cmd *cobra.Command, args []string) error {
 		{Role: "system", Content: buildSystemMessage(projectCtx, planSystemPrompt)},
 		{Role: "user", Content: input},
 	}
-	_, err = ollama.StreamChat(cfg, messages)
+	h := history.New(cfg.TokenThreshold, messages)
+
+	err = initiateConversation(cfg, h, ollama.StreamChat)
+	if err != nil {
+		return err
+	}
+	err = runConversationLoop(cfg, h, ollama.StreamChat)
 	return err
 }

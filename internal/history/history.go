@@ -20,16 +20,20 @@ type History struct {
 
 // New creates a History with the given token threshold.
 // Panics if the tiktoken encoder cannot be loaded (indicates bad installation).
-func New(threshold int) *History {
+func New(threshold int, initialMessages []Message) *History {
 	enc, err := tiktoken.GetEncoding("cl100k_base")
 	if err != nil {
 		panic("history: failed to load tiktoken encoder: " + err.Error())
 	}
-	return &History{
+	h := &History{
 		messages:  []Message{},
 		threshold: threshold,
 		enc:       enc,
 	}
+	for _, m := range initialMessages {
+		h.Add(m.Role, m.Content)
+	}
+	return h
 }
 
 // Add appends a message to the history.

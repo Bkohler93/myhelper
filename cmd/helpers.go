@@ -2,8 +2,10 @@ package cmd
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"os/signal"
 	"strings"
@@ -56,6 +58,21 @@ func resolveInput(args []string, interactivePrompt string) (string, error) {
 		return strings.TrimSpace(args[0]), nil
 	}
 	return readInteractive(interactivePrompt)
+}
+
+var emptyHistoryErr = errors.New("cannot initiate conversation with empty history")
+
+func initiateConversation(cfg config.Config, hist *history.History, streamFn func(config.Config, []history.Message) (string, error)) error {
+	if len(hist.Messages()) == 0 {
+		return emptyHistoryErr
+	}
+	res, err := streamFn(cfg, hist.Messages())
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+	hist.Add("assistant", res)
+	return nil
 }
 
 // runConversationLoop drives the multi-turn conversation after the first

@@ -8,6 +8,18 @@ A Go CLI tool for Go developers that offloads common coding micro-tasks to a loc
 
 Get a useful, context-aware answer from the local model in one command, without context-bloat or round-trips to an external API.
 
+## Current Milestone: v1.1 Conversational Mode
+
+**Goal:** Turn one-shot commands into rolling conversations with automatic history summarization to stay within model context limits.
+
+**Target features:**
+- All 4 query commands (plan, lookup, starter, pattern) enter a conversation loop after the first response
+- History accumulates as Q&A pairs; token count tracked via go-tiktoken
+- Configurable token threshold (default 4,100); when hit, model summarizes history focused on the original goal
+- Re-condensation: subsequent summaries are compressed together with new turns when the threshold is hit again
+- Session ends on user typing "quit" or Ctrl+C
+- `init` command stays one-shot
+
 ## Requirements
 
 ### Validated
@@ -24,7 +36,19 @@ Get a useful, context-aware answer from the local model in one command, without 
 
 ### Active
 
-(None — ship v1.0 first, then define v1.1 scope via `/gsd:new-milestone`)
+- Conversation loop for plan, lookup, starter, pattern commands — v1.1
+- Rolling history with go-tiktoken token counting — v1.1 *(infrastructure complete — Phase 2)*
+- History summarization when threshold reached (default 4,100 tokens) — v1.1
+- Re-condensation of prior summaries with new history — v1.1
+- Configurable token threshold (env var / flag) — v1.1 *(CONF-01 validated — Phase 2)*
+- Session exit on "quit" input or Ctrl+C — v1.1
+
+### Validated in Phase 2
+
+- ✓ `internal/history` package — `Message`, `History`, `TokenCount()`, `ExceedsLimit()` with tiktoken cl100k_base
+- ✓ `Config.TokenThreshold` — default 4100, overridable via `MYHELPER_TOKEN_LIMIT` env var or `--token-limit` flag
+- ✓ Local project config path changed to `.myhelper/config.json`
+- ✓ Ollama client migrated from `/api/generate` (StreamPrompt) to `/api/chat` (StreamChat) — all 4 query commands updated
 
 ### Out of Scope
 
@@ -84,4 +108,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-07 after v1.0 milestone*
+*Last updated: 2026-04-07 — v1.1 Conversational Mode milestone started*

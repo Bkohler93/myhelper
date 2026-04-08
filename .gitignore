@@ -1,3 +1,5 @@
 .planning/
 myhelper
 .myhelper/
+tmp/
+.claude/

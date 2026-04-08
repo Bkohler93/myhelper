@@ -49,7 +49,7 @@ func TestRunConversationLoop(t *testing.T) {
 
 	t.Run("quit exits immediately with nil, no model call", func(t *testing.T) {
 		fs := &fakeStream{}
-		hist := history.New(4000)
+		hist := history.New(4000, nil)
 		restore := replaceStdin(t, "quit\n")
 		defer restore()
 
@@ -64,7 +64,7 @@ func TestRunConversationLoop(t *testing.T) {
 
 	t.Run("empty input reprints prompt without calling model", func(t *testing.T) {
 		fs := &fakeStream{responses: []string{"response"}}
-		hist := history.New(4000)
+		hist := history.New(4000, nil)
 		// First line empty (no model call), second line "quit" (exit)
 		restore := replaceStdin(t, "\nquit\n")
 		defer restore()
@@ -80,7 +80,7 @@ func TestRunConversationLoop(t *testing.T) {
 
 	t.Run("normal turn: calls streamFn and appends messages to history", func(t *testing.T) {
 		fs := &fakeStream{responses: []string{"assistant reply"}}
-		hist := history.New(4000)
+		hist := history.New(4000, nil)
 		restore := replaceStdin(t, "hello\nquit\n")
 		defer restore()
 
@@ -106,7 +106,7 @@ func TestRunConversationLoop(t *testing.T) {
 	t.Run("streamFn error is returned", func(t *testing.T) {
 		errExpected := io.EOF
 		fs := &fakeStream{err: errExpected}
-		hist := history.New(4000)
+		hist := history.New(4000, nil)
 		restore := replaceStdin(t, "some input\n")
 		defer restore()
 
@@ -118,7 +118,7 @@ func TestRunConversationLoop(t *testing.T) {
 
 	t.Run("SIGINT causes clean return with nil", func(t *testing.T) {
 		fs := &fakeStream{}
-		hist := history.New(4000)
+		hist := history.New(4000, nil)
 
 		// Provide a pipe that never closes so stdin blocks indefinitely.
 		r, w := io.Pipe()

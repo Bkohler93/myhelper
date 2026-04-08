@@ -8,7 +8,7 @@ import (
 
 // Test 1: Add appends a Message to the internal slice
 func TestHistory_Add(t *testing.T) {
-	h := history.New(4100)
+	h := history.New(4100, nil)
 	h.Add("user", "hello")
 	msgs := h.Messages()
 	if len(msgs) != 1 {
@@ -21,7 +21,7 @@ func TestHistory_Add(t *testing.T) {
 
 // Test 2: TokenCount returns 0 for empty history
 func TestHistory_TokenCount_Empty(t *testing.T) {
-	h := history.New(4100)
+	h := history.New(4100, nil)
 	if h.TokenCount() != 0 {
 		t.Errorf("expected 0 tokens for empty history, got %d", h.TokenCount())
 	}
@@ -29,7 +29,7 @@ func TestHistory_TokenCount_Empty(t *testing.T) {
 
 // Test 3: TokenCount returns positive count for a single message
 func TestHistory_TokenCount_NonEmpty(t *testing.T) {
-	h := history.New(4100)
+	h := history.New(4100, nil)
 	h.Add("user", "hello world")
 	count := h.TokenCount()
 	if count <= 0 {
@@ -39,7 +39,7 @@ func TestHistory_TokenCount_NonEmpty(t *testing.T) {
 
 // Test 4: TokenCount accumulates across multiple messages
 func TestHistory_TokenCount_Accumulates(t *testing.T) {
-	h := history.New(4100)
+	h := history.New(4100, nil)
 	h.Add("user", "hello world")
 	countOne := h.TokenCount()
 	h.Add("assistant", "how are you")
@@ -51,7 +51,7 @@ func TestHistory_TokenCount_Accumulates(t *testing.T) {
 
 // Test 5: ExceedsLimit returns false when token count is within threshold
 func TestHistory_ExceedsLimit_False(t *testing.T) {
-	h := history.New(4100)
+	h := history.New(4100, nil)
 	h.Add("user", "hi")
 	if h.ExceedsLimit() {
 		t.Errorf("expected ExceedsLimit() == false for small message within threshold")
@@ -61,7 +61,7 @@ func TestHistory_ExceedsLimit_False(t *testing.T) {
 // Test 6: ExceedsLimit returns true when token count exceeds threshold
 func TestHistory_ExceedsLimit_True(t *testing.T) {
 	// Set a very small threshold so any content exceeds it
-	h := history.New(1)
+	h := history.New(1, nil)
 	h.Add("user", "hello world this is a longer message to exceed the threshold")
 	if !h.ExceedsLimit() {
 		t.Errorf("expected ExceedsLimit() == true when token count exceeds threshold of 1")
@@ -70,11 +70,11 @@ func TestHistory_ExceedsLimit_True(t *testing.T) {
 
 // Test 7: ExceedsLimit returns false when token count equals threshold exactly (strictly greater than)
 func TestHistory_ExceedsLimit_Boundary(t *testing.T) {
-	h := history.New(4100)
+	h := history.New(4100, nil)
 	h.Add("user", "hi")
 	exactCount := h.TokenCount()
 	// Create a history with threshold exactly equal to token count
-	hExact := history.New(exactCount)
+	hExact := history.New(exactCount, nil)
 	hExact.Add("user", "hi")
 	if hExact.ExceedsLimit() {
 		t.Errorf("expected ExceedsLimit() == false when token count equals threshold exactly")
@@ -83,7 +83,7 @@ func TestHistory_ExceedsLimit_Boundary(t *testing.T) {
 
 // Test 8: Messages returns all messages in insertion order
 func TestHistory_Messages_Order(t *testing.T) {
-	h := history.New(4100)
+	h := history.New(4100, nil)
 	h.Add("user", "a")
 	h.Add("assistant", "b")
 	msgs := h.Messages()
