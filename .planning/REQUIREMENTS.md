@@ -1,0 +1,64 @@
+# Requirements: myhelper v1.2 Smart Context
+
+## Milestone v1.2 Requirements
+
+### INIT (Project Scanning & Index Generation)
+
+- [ ] **INIT-01**: User can run `init` in a Go project directory to auto-scan project files and generate `.myhelper/context.md` with a high-level project summary (replaces current blank template)
+- [ ] **INIT-02**: `init` extracts exported symbols, function signatures, and package names from all `.go` source files via `go/ast`
+- [ ] **INIT-03**: `init` reads `go.mod`/`go.sum` and includes module name and direct dependencies in the index
+- [ ] **INIT-04**: `init` reads README and documentation files and includes project-level intent in the index
+- [ ] **INIT-05**: `init` reads config/schema files (`.json`, `.yaml`, `.toml`) and includes them in the index
+- [ ] **INIT-06**: `init` generates `.myhelper/index.json` with per-file entries token-capped at 80% of `Config.TokenThreshold`
+- [ ] **INIT-07**: `init` calls `ollama.Chat` per-package to generate design/pattern summaries stored in `.myhelper/summaries/`
+- [ ] **INIT-08**: `init` skips `.git/`, `vendor/`, `testdata/`, `.myhelper/`, and `// Code generated` files during scanning
+
+### SYNC (Re-indexing)
+
+- [x] **SYNC-01**: User can run `sync` to refresh all `.myhelper/` index, summaries, and context when the project changes
+- [x] **SYNC-02**: `sync` performs a delta rescan — detects files modified since the last sync (via stored mtime timestamp) and re-indexes/re-summarizes only changed files; `context.md` is regenerated on every sync
+
+### CTX (Two-Pass Context Injection)
+
+- [ ] **CTX-01**: All 4 query commands (plan, lookup, starter, pattern) use two-pass injection: inject `index.json` → model selects relevant files → inject their summaries/content into the prompt
+- [ ] **CTX-02**: Pass-1 file paths returned by the model are validated with `os.Stat`; invalid paths discarded; fall back to injecting all summaries if no valid paths remain
+- [ ] **CTX-03**: When a selected file exceeds the context budget, `go/ast` generates a symbol map and the model is asked for a specific line range (micro-pass); truncation as final fallback
+- [ ] **CTX-04**: Injected file content is placed in user-role messages only — never the system message — to preserve existing history summarization behavior
+
+---
+
+## Future Requirements
+
+- Nested sub-indexes for large projects when flat `index.json` exceeds context budget — auto-triggered when flat index overflows (v1.3)
+- Incremental/delta indexing via mtime tracking — full rescan is sufficient at current scale (future)
+- Non-Go AST parsing (TypeScript, Python, etc.) — tool is optimized for Go projects (future)
+- Background sync / file watcher — on-demand is sufficient for developer workflow (future)
+
+---
+
+## Out of Scope
+
+- Vector/embedding search — the two-pass LLM-as-retriever design makes this unnecessary and avoids infrastructure overhead
+- Gitignore library dependency — hardcoded skip list covers Go projects; avoids an unmaintained dependency
+- Global or cross-project index — per-directory `.myhelper/` only, consistent with existing context.md design decision
+
+---
+
+## Traceability
+
+| REQ-ID | Phase | Status |
+|--------|-------|--------|
+| INIT-01 | Phase 5 | Pending |
+| INIT-02 | Phase 5 | Pending |
+| INIT-03 | Phase 5 | Pending |
+| INIT-04 | Phase 5 | Pending |
+| INIT-05 | Phase 5 | Pending |
+| INIT-06 | Phase 5 | Pending |
+| INIT-07 | Phase 5 | Pending |
+| INIT-08 | Phase 5 | Pending |
+| SYNC-01 | Phase 6 | Complete |
+| SYNC-02 | Phase 6 | Complete |
+| CTX-01 | Phase 7 | Pending |
+| CTX-02 | Phase 7 | Pending |
+| CTX-04 | Phase 7 | Pending |
+| CTX-03 | Phase 8 | Pending |
