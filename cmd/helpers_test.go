@@ -231,7 +231,7 @@ func TestBuildInjectedMessages(t *testing.T) {
 			t.Fatal(err)
 		}
 		idx := scanner.Index{
-			Files: []scanner.FileEntry{{Path: goFile, Package: "main", Symbols: []string{"func main"}, TokenCount: 10}},
+			Files: []scanner.FileEntry{{Path: goFile, Package: "main", ExportedSymbols: []string{"func main"}, TokenCount: 10}},
 		}
 		writeIndexFile(t, root, idx)
 
@@ -308,10 +308,10 @@ func TestBuildInjectedMessages(t *testing.T) {
 		}
 		idx := scanner.Index{
 			Files: []scanner.FileEntry{{
-				Path:       goFile,
-				Package:    "main",
-				Symbols:    []string{"func BigFunc"},
-				TokenCount: 5,
+				Path:            goFile,
+				Package:         "main",
+				ExportedSymbols: []string{"func BigFunc"},
+				TokenCount:      5,
 			}},
 		}
 		writeIndexFile(t, root, idx)
@@ -354,8 +354,8 @@ func TestBuildInjectedMessages(t *testing.T) {
 		}
 		idx := scanner.Index{
 			Files: []scanner.FileEntry{
-				{Path: file1, Package: "main", Symbols: []string{"func Alpha"}, TokenCount: 5},
-				{Path: file2, Package: "main", Symbols: []string{"func Beta"}, TokenCount: 5},
+				{Path: file1, Package: "main", ExportedSymbols: []string{"func Alpha"}, TokenCount: 5},
+				{Path: file2, Package: "main", ExportedSymbols: []string{"func Beta"}, TokenCount: 5},
 			},
 		}
 		writeIndexFile(t, root, idx)
@@ -568,10 +568,10 @@ func TestBuildInjectedMessages_NoSymbolBlock(t *testing.T) {
 		// Index references the file
 		idx := scanner.Index{
 			Files: []scanner.FileEntry{{
-				Path:       "src/big.go",
-				Package:    "main",
-				Symbols:    []string{"func BigFn"},
-				TokenCount: 10,
+				Path:            "src/big.go",
+				Package:         "main",
+				ExportedSymbols: []string{"func BigFn"},
+				TokenCount:      10,
 			}},
 		}
 		writeIndexFile(t, root, idx)
