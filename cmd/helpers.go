@@ -28,7 +28,7 @@ var stdinReader io.Reader = os.Stdin
 // Used when the user omits the positional argument.
 func readInteractive(prompt string) (string, error) {
 	fmt.Fprint(os.Stderr, prompt)
-	scanner := bufio.NewScanner(os.Stdin)
+	scanner := bufio.NewScanner(stdinReader)
 	if !scanner.Scan() {
 		if err := scanner.Err(); err != nil {
 			return "", fmt.Errorf("read input: %w", err)
@@ -244,6 +244,7 @@ func generateContextMD(root string, cfg config.Config, chatFn scanner.ChatFn) er
 	sb.WriteString("Describe what the project does, its key packages, and how they relate. ")
 	sb.WriteString("Be brief — under 300 words. Format as clean markdown prose, not a symbol list.\n\n")
 
+	summaryCount := 0
 	for _, e := range entries {
 		if e.IsDir() || !strings.HasSuffix(e.Name(), ".md") {
 			continue
@@ -254,6 +255,11 @@ func generateContextMD(root string, cfg config.Config, chatFn scanner.ChatFn) er
 		}
 		sb.WriteString("### " + strings.TrimSuffix(e.Name(), ".md") + "\n")
 		sb.WriteString(string(data) + "\n\n")
+		summaryCount++
+	}
+
+	if summaryCount == 0 {
+		return fmt.Errorf("generateContextMD: no summaries found in %s — run init first", summariesDir)
 	}
 
 	messages := []history.Message{
@@ -416,8 +422,15 @@ func buildInjectedMessages(root, query string, cfg config.Config, chatFn scanner
 		}
 
 		// Raw content too large — fall back to symbol block.
-		if fe, ok := entryByPath[path]; ok && len(fe.Symbols) > 0 {
-			sigContent := "// Symbols: " + strings.Join(fe.Symbols, ", ")
+		if fe, ok := entryByPath[path]; ok && (len(fe.ExportedSymbols) > 0 || len(fe.UnexportedSymbols) > 0) {
+			var sigParts []string
+			if len(fe.ExportedSymbols) > 0 {
+				sigParts = append(sigParts, "// Exported: "+strings.Join(fe.ExportedSymbols, ", "))
+			}
+			if len(fe.UnexportedSymbols) > 0 {
+				sigParts = append(sigParts, "// Unexported: "+strings.Join(fe.UnexportedSymbols, ", "))
+			}
+			sigContent := strings.Join(sigParts, "\n")
 			sigTokens := history.New(cfg.TokenThreshold, []history.Message{{Role: "user", Content: sigContent}}).TokenCount()
 			if usedTokens+sigTokens <= budget {
 				sb.WriteString("File: " + path + " (signatures only)\n```go\n" + sigContent + "\n```\n")

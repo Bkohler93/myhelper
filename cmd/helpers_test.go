@@ -230,7 +230,7 @@ func TestBuildInjectedMessages(t *testing.T) {
 			t.Fatal(err)
 		}
 		idx := scanner.Index{
-			Files: []scanner.FileEntry{{Path: goFile, Package: "main", Symbols: []string{"func main()"}, TokenCount: 10}},
+			Files: []scanner.FileEntry{{Path: goFile, Package: "main", ExportedSymbols: []string{"func main()"}, TokenCount: 10}},
 		}
 		writeIndexFile(t, root, idx)
 
@@ -255,7 +255,7 @@ func TestBuildInjectedMessages(t *testing.T) {
 	t.Run("invalid path from Pass-1 falls back to summaries injection", func(t *testing.T) {
 		root := t.TempDir()
 		idx := scanner.Index{
-			Files: []scanner.FileEntry{{Path: "real.go", Package: "main", Symbols: nil, TokenCount: 5}},
+			Files: []scanner.FileEntry{{Path: "real.go", Package: "main", TokenCount: 5}},
 		}
 		writeIndexFile(t, root, idx)
 		writeSummaryFile(t, root, "main", "# Main package summary")
@@ -307,10 +307,10 @@ func TestBuildInjectedMessages(t *testing.T) {
 		}
 		idx := scanner.Index{
 			Files: []scanner.FileEntry{{
-				Path:     goFile,
-				Package:  "main",
-				Symbols:  []string{"func BigFunc()"},
-				TokenCount: 5,
+				Path:            goFile,
+				Package:         "main",
+				ExportedSymbols: []string{"BigFunc"},
+				TokenCount:      5,
 			}},
 		}
 		writeIndexFile(t, root, idx)
@@ -353,8 +353,8 @@ func TestBuildInjectedMessages(t *testing.T) {
 		}
 		idx := scanner.Index{
 			Files: []scanner.FileEntry{
-				{Path: file1, Package: "main", Symbols: []string{"func Alpha()"}, TokenCount: 5},
-				{Path: file2, Package: "main", Symbols: []string{"func Beta()"}, TokenCount: 5},
+				{Path: file1, Package: "main", ExportedSymbols: []string{"Alpha"}, TokenCount: 5},
+				{Path: file2, Package: "main", ExportedSymbols: []string{"Beta"}, TokenCount: 5},
 			},
 		}
 		writeIndexFile(t, root, idx)
