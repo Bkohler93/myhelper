@@ -230,7 +230,7 @@ func TestBuildInjectedMessages(t *testing.T) {
 			t.Fatal(err)
 		}
 		idx := scanner.Index{
-			Files: []scanner.FileEntry{{Path: goFile, Package: "main", Symbols: []string{"func main()"}, TokenCount: 10}},
+			Files: []scanner.FileEntry{{Path: goFile, Package: "main", ExportedSymbols: []string{"main"}, TokenCount: 10}},
 		}
 		writeIndexFile(t, root, idx)
 
@@ -309,7 +309,7 @@ func TestBuildInjectedMessages(t *testing.T) {
 			Files: []scanner.FileEntry{{
 				Path:            goFile,
 				Package:         "main",
-				Symbols: []string{"BigFunc"},
+				ExportedSymbols: []string{"BigFunc"},
 				TokenCount:      5,
 			}},
 		}
@@ -353,8 +353,8 @@ func TestBuildInjectedMessages(t *testing.T) {
 		}
 		idx := scanner.Index{
 			Files: []scanner.FileEntry{
-				{Path: file1, Package: "main", Symbols: []string{"Alpha"}, TokenCount: 5},
-				{Path: file2, Package: "main", Symbols: []string{"Beta"}, TokenCount: 5},
+				{Path: file1, Package: "main", ExportedSymbols: []string{"Alpha"}, TokenCount: 5},
+				{Path: file2, Package: "main", ExportedSymbols: []string{"Beta"}, TokenCount: 5},
 			},
 		}
 		writeIndexFile(t, root, idx)
