@@ -58,6 +58,69 @@ func ExtractSymbols(path string) (pkg string, symbols []string, err error) {
 	return pkg, symbols, nil
 }
 
+// SymbolLine represents a named symbol (function or exported type) in a Go
+// source file, with its 1-indexed start and end line numbers.
+type SymbolLine struct {
+	Name  string
+	Start int
+	End   int
+}
+
+// ExtractSymbolMap parses the Go source file at path and returns a slice of
+// SymbolLine for:
+//   - all function declarations (exported and unexported, including methods)
+//   - exported struct and interface type declarations
+//
+// Name format:
+//   - Functions: "func Name" (no signature, just name with "func " prefix)
+//   - Types: "type Name struct" or "type Name interface"
+//
+// Line numbers are 1-indexed from go/ast fset.Position().
+// Returns an error if the file cannot be parsed; never panics.
+// ExtractSymbols is NOT called or modified by this function.
+func ExtractSymbolMap(path string) ([]SymbolLine, error) {
+	fset := token.NewFileSet()
+	f, err := parser.ParseFile(fset, path, nil, 0)
+	if err != nil {
+		return nil, fmt.Errorf("ExtractSymbolMap: parse %s: %w", path, err)
+	}
+
+	var symbols []SymbolLine
+	for _, decl := range f.Decls {
+		switch d := decl.(type) {
+		case *ast.FuncDecl:
+			symbols = append(symbols, SymbolLine{
+				Name:  "func " + d.Name.Name,
+				Start: fset.Position(d.Pos()).Line,
+				End:   fset.Position(d.End()).Line,
+			})
+
+		case *ast.GenDecl:
+			for _, spec := range d.Specs {
+				ts, ok := spec.(*ast.TypeSpec)
+				if !ok || !ts.Name.IsExported() {
+					continue
+				}
+				var label string
+				switch ts.Type.(type) {
+				case *ast.StructType:
+					label = "type " + ts.Name.Name + " struct"
+				case *ast.InterfaceType:
+					label = "type " + ts.Name.Name + " interface"
+				default:
+					continue
+				}
+				symbols = append(symbols, SymbolLine{
+					Name:  label,
+					Start: fset.Position(ts.Pos()).Line,
+					End:   fset.Position(ts.End()).Line,
+				})
+			}
+		}
+	}
+	return symbols, nil
+}
+
 // buildFuncSig builds a human-readable function signature string for an
 // exported function declaration. Format: "func Name(params) results"
 func buildFuncSig(decl *ast.FuncDecl, fset *token.FileSet) string {
