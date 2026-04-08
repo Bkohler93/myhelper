@@ -2,18 +2,22 @@ package cmd
 
 import (
 	"bufio"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"log"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/bkohler93/myhelper/internal/config"
 	"github.com/bkohler93/myhelper/internal/history"
 	"github.com/bkohler93/myhelper/internal/ollama"
+	"github.com/bkohler93/myhelper/internal/scanner"
 )
 
 // stdinReader is the source of input for the conversation loop.
@@ -216,4 +220,80 @@ func summarize(cfg config.Config, hist *history.History, summarizePrompt, recond
 	newMessages = append(newMessages, finalPair...)
 	hist.Replace(newMessages)
 	return nil
+}
+
+// syncMeta is written to .myhelper/meta.json after every successful init or sync.
+type syncMeta struct {
+	LastSync time.Time `json:"last_sync"`
+}
+
+// generateContextMD reads per-package summaries from .myhelper/summaries/,
+// synthesizes them into a human-readable project overview via chatFn, and
+// writes the result to .myhelper/context.md.
+// ChatFn is injected for testability (per D-09).
+func generateContextMD(root string, cfg config.Config, chatFn scanner.ChatFn) error {
+	summariesDir := filepath.Join(root, ".myhelper", "summaries")
+	entries, err := os.ReadDir(summariesDir)
+	if err != nil {
+		return fmt.Errorf("generateContextMD: read summaries dir: %w", err)
+	}
+
+	var sb strings.Builder
+	sb.WriteString("Below are per-package summaries for a Go project. ")
+	sb.WriteString("Write a concise, human-readable project overview in markdown. ")
+	sb.WriteString("Describe what the project does, its key packages, and how they relate. ")
+	sb.WriteString("Be brief — under 300 words. Format as clean markdown prose, not a symbol list.\n\n")
+
+	for _, e := range entries {
+		if e.IsDir() || !strings.HasSuffix(e.Name(), ".md") {
+			continue
+		}
+		data, err := os.ReadFile(filepath.Join(summariesDir, e.Name()))
+		if err != nil {
+			return fmt.Errorf("generateContextMD: read %s: %w", e.Name(), err)
+		}
+		sb.WriteString("### " + strings.TrimSuffix(e.Name(), ".md") + "\n")
+		sb.WriteString(string(data) + "\n\n")
+	}
+
+	messages := []history.Message{
+		{Role: "user", Content: sb.String()},
+	}
+	content, err := chatFn(cfg, messages)
+	if err != nil {
+		return fmt.Errorf("generateContextMD: chatFn: %w", err)
+	}
+
+	outPath := filepath.Join(root, ".myhelper", "context.md")
+	return os.WriteFile(outPath, []byte(content), 0644)
+}
+
+// readLastSync reads the stored last_sync timestamp from .myhelper/meta.json.
+// Returns time.Time{} (zero value) if the file does not exist — callers treat
+// zero as "never synced" (all files are considered changed).
+func readLastSync(root string) (time.Time, error) {
+	path := filepath.Join(root, ".myhelper", "meta.json")
+	data, err := os.ReadFile(path)
+	if os.IsNotExist(err) {
+		return time.Time{}, nil
+	}
+	if err != nil {
+		return time.Time{}, fmt.Errorf("readLastSync: %w", err)
+	}
+	var m syncMeta
+	if err := json.Unmarshal(data, &m); err != nil {
+		return time.Time{}, fmt.Errorf("readLastSync: unmarshal: %w", err)
+	}
+	return m.LastSync, nil
+}
+
+// writeLastSync writes t as the last_sync timestamp to .myhelper/meta.json.
+// Called after every successful init or sync (per D-05).
+func writeLastSync(root string, t time.Time) error {
+	path := filepath.Join(root, ".myhelper", "meta.json")
+	data, err := json.Marshal(syncMeta{LastSync: t})
+	if err != nil {
+		return fmt.Errorf("writeLastSync: marshal: %w", err)
+	}
+	return os.WriteFile(path, data, 0644)
 }
