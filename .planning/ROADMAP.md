@@ -32,9 +32,9 @@ Full archive: `.planning/milestones/v1.1-ROADMAP.md`
 
 **Milestone Goal:** Replace the blank init template with auto-generated project intelligence — an index and summaries the model uses to surgically inject only relevant code into each prompt.
 
-- [ ] **Phase 5: Scanner & Index Generation** - Scan project files, extract AST symbols, generate token-budgeted index.json and per-package summaries
+- [x] **Phase 5: Scanner & Index Generation** - Scan project files, extract AST symbols, generate token-budgeted index.json and per-package summaries (completed 2026-04-08)
 - [x] **Phase 6: init + sync Commands** - Wire scanner into init command and add sync command for full rescan (completed 2026-04-08)
-- [ ] **Phase 7: Two-Pass Context Injection** - Pre-flight injection into all 4 query commands; model selects relevant files from index before answering
+- [x] **Phase 7: Two-Pass Context Injection** - Pre-flight injection into all 4 query commands; model selects relevant files from index before answering (completed 2026-04-08)
 - [ ] **Phase 8: Large File Micro-Pass** - AST symbol-level line-range selection for oversized files; truncation as final fallback
 
 ## Phase Details
@@ -83,8 +83,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 07-01-PLAN.md — buildInjectedMessages helper + tests (Pass-1 logic, path validation, token budget, fallbacks)
-- [ ] 07-02-PLAN.md — Wire buildInjectedMessages into all 4 query commands (plan, lookup, starter, pattern)
+- [x] 07-01-PLAN.md — buildInjectedMessages helper + tests (Pass-1 logic, path validation, token budget, fallbacks)
+- [x] 07-02-PLAN.md — Wire buildInjectedMessages into all 4 query commands (plan, lookup, starter, pattern)
 
 ### Phase 8: Large File Micro-Pass
 **Goal**: Files that exceed the context budget are handled gracefully via symbol-level line-range extraction rather than raw truncation
@@ -93,7 +93,11 @@ Plans:
 **Success Criteria** (what must be TRUE):
   1. When a selected file exceeds the context budget, go/ast generates a symbol map and the model is asked for a specific line range rather than receiving the full file
   2. When line-range extraction is not possible or the range still exceeds the budget, the content is truncated at a safe boundary as a final fallback with no panic or error surfaced to the user
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 08-01-PLAN.md — SymbolLine type + ExtractSymbolMap in internal/scanner/ast.go (TDD)
+- [ ] 08-02-PLAN.md — microPassFile helper + remove symbol-block fallback in cmd/helpers.go (TDD)
 
 ## Progress
 
@@ -103,7 +107,7 @@ Plans:
 | 2. History & Token Infrastructure | v1.1 | 3/3 | Complete | 2026-04-07 |
 | 3. Conversation Loop | v1.1 | 2/2 | Complete | 2026-04-07 |
 | 4. Summarization & Re-condensation | v1.1 | 2/2 | Complete | 2026-04-08 |
-| 5. Scanner & Index Generation | v1.2 | 0/5 | Not started | - |
-| 6. init + sync Commands | v1.2 | 3/3 | Complete   | 2026-04-08 |
-| 7. Two-Pass Context Injection | v1.2 | 0/2 | Not started | - |
-| 8. Large File Micro-Pass | v1.2 | 0/? | Not started | - |
+| 5. Scanner & Index Generation | v1.2 | 6/6 | Complete | 2026-04-08 |
+| 6. init + sync Commands | v1.2 | 3/3 | Complete | 2026-04-08 |
+| 7. Two-Pass Context Injection | v1.2 | 2/2 | Complete | 2026-04-08 |
+| 8. Large File Micro-Pass | v1.2 | 0/2 | Not started | - |
