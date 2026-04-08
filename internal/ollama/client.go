@@ -85,6 +85,42 @@ func StreamChat(cfg config.Config, messages []history.Message) (string, error) {
 	return sb.String(), nil
 }
 
+// Chat sends a messages array to the Ollama /api/chat endpoint in
+// non-streaming mode and returns the full response content as a string.
+// Unlike StreamChat, nothing is written to stdout — the response text is
+// returned to the caller only. Used for internal calls like summarization.
+func Chat(cfg config.Config, messages []history.Message) (string, error) {
+	url := chatURL(cfg.Endpoint)
+
+	reqBody := chatRequest{
+		Model:    cfg.Model,
+		Messages: messages,
+		Stream:   false,
+	}
+
+	data, err := json.Marshal(reqBody)
+	if err != nil {
+		return "", fmt.Errorf("marshal request: %w", err)
+	}
+
+	resp, err := http.Post(url, "application/json", bytes.NewReader(data))
+	if err != nil {
+		return "", fmt.Errorf("POST %s: %w", url, err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return "", fmt.Errorf("ollama returned %d: %s", resp.StatusCode, strings.TrimSpace(string(body)))
+	}
+
+	var res chatResponse
+	if err := json.NewDecoder(resp.Body).Decode(&res); err != nil {
+		return "", fmt.Errorf("decode response: %w", err)
+	}
+	return res.Message.Content, nil
+}
+
 // chatURL constructs the full /api/chat endpoint URL.
 // Accepts endpoint with or without http:// prefix.
 func chatURL(endpoint string) string {
