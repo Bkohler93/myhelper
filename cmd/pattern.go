@@ -1,6 +1,9 @@
 package cmd
 
 import (
+	"fmt"
+	"os"
+
 	"github.com/bkohler93/myhelper/internal/config"
 	appctx "github.com/bkohler93/myhelper/internal/context"
 	"github.com/bkohler93/myhelper/internal/history"
@@ -39,10 +42,20 @@ func runPattern(cmd *cobra.Command, args []string) error {
 	}
 
 	cfg := config.Load()
+
+	root, err := os.Getwd()
+	if err != nil {
+		return fmt.Errorf("runPattern: getwd: %w", err)
+	}
+	injected, err := buildInjectedMessages(root, input, cfg, ollama.Chat, pass1PatternFocus)
+	if err != nil {
+		return fmt.Errorf("runPattern: buildInjectedMessages: %w", err)
+	}
+
 	messages := []history.Message{
 		{Role: "system", Content: buildSystemMessage(projectCtx, patternSystemPrompt)},
-		{Role: "user", Content: input},
 	}
+	messages = append(messages, injected...)
 	hist := history.New(cfg.TokenThreshold, messages)
 	err = initiateConversation(cfg, hist, ollama.StreamChat)
 	if err != nil {

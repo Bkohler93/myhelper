@@ -422,15 +422,8 @@ func buildInjectedMessages(root, query string, cfg config.Config, chatFn scanner
 		}
 
 		// Raw content too large — fall back to symbol block.
-		if fe, ok := entryByPath[path]; ok && (len(fe.ExportedSymbols) > 0 || len(fe.UnexportedSymbols) > 0) {
-			var sigParts []string
-			if len(fe.ExportedSymbols) > 0 {
-				sigParts = append(sigParts, "// Exported: "+strings.Join(fe.ExportedSymbols, ", "))
-			}
-			if len(fe.UnexportedSymbols) > 0 {
-				sigParts = append(sigParts, "// Unexported: "+strings.Join(fe.UnexportedSymbols, ", "))
-			}
-			sigContent := strings.Join(sigParts, "\n")
+		if fe, ok := entryByPath[path]; ok && len(fe.Symbols) > 0 {
+			sigContent := "// Symbols: " + strings.Join(fe.Symbols, ", ")
 			sigTokens := history.New(cfg.TokenThreshold, []history.Message{{Role: "user", Content: sigContent}}).TokenCount()
 			if usedTokens+sigTokens <= budget {
 				sb.WriteString("File: " + path + " (signatures only)\n```go\n" + sigContent + "\n```\n")

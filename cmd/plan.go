@@ -1,6 +1,9 @@
 package cmd
 
 import (
+	"fmt"
+	"os"
+
 	"github.com/bkohler93/myhelper/internal/config"
 	appctx "github.com/bkohler93/myhelper/internal/context"
 	"github.com/bkohler93/myhelper/internal/history"
@@ -39,10 +42,20 @@ func runPlan(cmd *cobra.Command, args []string) error {
 	}
 
 	cfg := config.Load()
+
+	root, err := os.Getwd()
+	if err != nil {
+		return fmt.Errorf("runPlan: getwd: %w", err)
+	}
+	injected, err := buildInjectedMessages(root, input, cfg, ollama.Chat, pass1PlanFocus)
+	if err != nil {
+		return fmt.Errorf("runPlan: buildInjectedMessages: %w", err)
+	}
+
 	messages := []history.Message{
 		{Role: "system", Content: buildSystemMessage(projectCtx, planSystemPrompt)},
-		{Role: "user", Content: input},
 	}
+	messages = append(messages, injected...)
 	h := history.New(cfg.TokenThreshold, messages)
 
 	err = initiateConversation(cfg, h, ollama.StreamChat)
