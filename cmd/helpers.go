@@ -287,6 +287,152 @@ func readLastSync(root string) (time.Time, error) {
 	return m.LastSync, nil
 }
 
+// Pass-1 system prompt constants for two-pass context injection (Phase 7).
+const pass1BaseSystemPrompt = "You are a file retrieval assistant. Based on the project index below, identify which files (max 3) are absolutely necessary to read to answer the user's request. Output ONLY a comma-separated list of file paths."
+const pass1PlanFocus = "Focus on architectural entry points and interfaces."
+const pass1LookupFocus = "Strictly find definitions of the specific term."
+const pass1StarterFocus = "Find boilerplate or similar commands/structs to copy."
+const pass1PatternFocus = "Find multiple instances of a repeated logic pattern."
+
+// readIndexFile reads and unmarshals .myhelper/index.json from root.
+// Returns os.ErrNotExist-wrapped error if the file does not exist.
+func readIndexFile(root string) (scanner.Index, error) {
+	path := filepath.Join(root, ".myhelper", "index.json")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return scanner.Index{}, err
+	}
+	var idx scanner.Index
+	if err := json.Unmarshal(data, &idx); err != nil {
+		return scanner.Index{}, fmt.Errorf("readIndexFile: unmarshal: %w", err)
+	}
+	return idx, nil
+}
+
+// injectSummaries is the fallback injection path: reads all .md files from
+// .myhelper/summaries/ and prepends them to the user query.
+// If the summaries directory does not exist or is empty, returns a bare user
+// query message with no error.
+func injectSummaries(root, query string) ([]history.Message, error) {
+	dir := filepath.Join(root, ".myhelper", "summaries")
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return []history.Message{{Role: "user", Content: query}}, nil
+	}
+	var sb strings.Builder
+	sb.WriteString("Here are project package summaries for context:\n")
+	count := 0
+	for _, e := range entries {
+		if e.IsDir() || !strings.HasSuffix(e.Name(), ".md") {
+			continue
+		}
+		data, err := os.ReadFile(filepath.Join(dir, e.Name()))
+		if err != nil {
+			continue
+		}
+		sb.WriteString("Package: " + strings.TrimSuffix(e.Name(), ".md") + "\n")
+		sb.WriteString(string(data) + "\n")
+		count++
+	}
+	if count == 0 {
+		return []history.Message{{Role: "user", Content: query}}, nil
+	}
+	sb.WriteString(query)
+	return []history.Message{{Role: "user", Content: sb.String()}}, nil
+}
+
+// buildInjectedMessages performs two-pass context injection:
+//  1. Pass 1: calls chatFn with the project index to select relevant files (max 3).
+//  2. Validates each returned path with os.Stat; discards invalid paths.
+//  3. Reads raw file content within an 80% token budget; falls back to symbol
+//     list when raw content exceeds remaining budget; skips file when both exceed.
+//  4. Falls back to injectSummaries when no valid paths survive Pass 1.
+//  5. Falls back to bare user query when index.json does not exist.
+//
+// All returned messages have Role "user" (never system).
+func buildInjectedMessages(root, query string, cfg config.Config, chatFn scanner.ChatFn, focus string) ([]history.Message, error) {
+	idx, err := readIndexFile(root)
+	if err != nil {
+		if os.IsNotExist(err) {
+			fmt.Fprint(os.Stderr, "No index found — run 'mh init' for context-aware answers.\n")
+			return []history.Message{{Role: "user", Content: query}}, nil
+		}
+		return nil, fmt.Errorf("buildInjectedMessages: read index: %w", err)
+	}
+
+	indexJSON, _ := json.Marshal(idx)
+	systemPrompt := pass1BaseSystemPrompt
+	if focus != "" {
+		systemPrompt += "\n" + focus
+	}
+	pass1Messages := []history.Message{
+		{Role: "system", Content: systemPrompt},
+		{Role: "user", Content: "Project index:\n" + string(indexJSON) + "\n\nUser request: " + query},
+	}
+
+	response, err := chatFn(cfg, pass1Messages)
+	if err != nil {
+		return injectSummaries(root, query)
+	}
+
+	var validPaths []string
+	for _, candidate := range strings.Split(response, ",") {
+		p := strings.TrimSpace(candidate)
+		if p == "" {
+			continue
+		}
+		if _, statErr := os.Stat(filepath.Join(root, p)); statErr == nil {
+			validPaths = append(validPaths, p)
+		}
+	}
+
+	if len(validPaths) == 0 {
+		return injectSummaries(root, query)
+	}
+
+	budget := int(float64(cfg.TokenThreshold) * 0.80)
+	usedTokens := 0
+
+	// Build a lookup map from path to FileEntry for symbol fallback.
+	entryByPath := make(map[string]scanner.FileEntry, len(idx.Files))
+	for _, fe := range idx.Files {
+		entryByPath[fe.Path] = fe
+	}
+
+	var sb strings.Builder
+	sb.WriteString("Here is the relevant source code for context:\n")
+
+	for _, path := range validPaths {
+		rawContent, readErr := os.ReadFile(filepath.Join(root, path))
+		if readErr != nil {
+			continue
+		}
+		rawTokens := history.New(cfg.TokenThreshold, []history.Message{{Role: "user", Content: string(rawContent)}}).TokenCount()
+
+		if usedTokens+rawTokens <= budget {
+			sb.WriteString("File: " + path + "\n```go\n" + string(rawContent) + "\n```\n")
+			usedTokens += rawTokens
+			continue
+		}
+
+		// Raw content too large — fall back to symbol block.
+		if fe, ok := entryByPath[path]; ok && len(fe.Symbols) > 0 {
+			sigContent := "// Symbols: " + strings.Join(fe.Symbols, ", ")
+			sigTokens := history.New(cfg.TokenThreshold, []history.Message{{Role: "user", Content: sigContent}}).TokenCount()
+			if usedTokens+sigTokens <= budget {
+				sb.WriteString("File: " + path + " (signatures only)\n```go\n" + sigContent + "\n```\n")
+				usedTokens += sigTokens
+				continue
+			}
+		}
+		// Budget exhausted — stop adding files.
+		break
+	}
+
+	sb.WriteString(query)
+	return []history.Message{{Role: "user", Content: sb.String()}}, nil
+}
+
 // writeLastSync writes t as the last_sync timestamp to .myhelper/meta.json.
 // Called after every successful init or sync (per D-05).
 func writeLastSync(root string, t time.Time) error {

@@ -315,8 +315,9 @@ func TestBuildInjectedMessages(t *testing.T) {
 		}
 		writeIndexFile(t, root, idx)
 
-		// Use very small threshold so raw content (even a few tokens) exceeds 80% budget
-		tinyThreshold := 5
+		// threshold=9 → budget=int(9*0.80)=7. raw content is 8 tokens (exceeds budget),
+		// sig content is 7 tokens (fits). This forces the symbol fallback path.
+		tinyThreshold := 9
 		tinyCfg := config.Config{TokenThreshold: tinyThreshold}
 
 		chatFn := func(cfg config.Config, msgs []history.Message) (string, error) {
