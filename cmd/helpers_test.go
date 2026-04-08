@@ -3,6 +3,7 @@ package cmd
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -230,7 +231,7 @@ func TestBuildInjectedMessages(t *testing.T) {
 			t.Fatal(err)
 		}
 		idx := scanner.Index{
-			Files: []scanner.FileEntry{{Path: goFile, Package: "main", ExportedSymbols: []string{"main"}, TokenCount: 10}},
+			Files: []scanner.FileEntry{{Path: goFile, Package: "main", Symbols: []string{"func main"}, TokenCount: 10}},
 		}
 		writeIndexFile(t, root, idx)
 
@@ -296,7 +297,7 @@ func TestBuildInjectedMessages(t *testing.T) {
 		}
 	})
 
-	t.Run("file content exceeds token budget uses symbol fallback", func(t *testing.T) {
+	t.Run("file content exceeds token budget — micro-pass skips file when budget too small", func(t *testing.T) {
 		root := t.TempDir()
 		// Write a small Go file
 		goFile := "big.go"
@@ -307,21 +308,21 @@ func TestBuildInjectedMessages(t *testing.T) {
 		}
 		idx := scanner.Index{
 			Files: []scanner.FileEntry{{
-				Path:            goFile,
-				Package:         "main",
-				ExportedSymbols: []string{"BigFunc"},
-				TokenCount:      5,
+				Path:       goFile,
+				Package:    "main",
+				Symbols:    []string{"func BigFunc"},
+				TokenCount: 5,
 			}},
 		}
 		writeIndexFile(t, root, idx)
 
-		// threshold=9 → budget=int(9*0.80)=7. raw content is 8 tokens (exceeds budget),
-		// sig content is 7 tokens (fits). This forces the symbol fallback path.
-		tinyThreshold := 9
+		// threshold=1 → budget=int(1*0.80)=0. microPassFile receives budget=0
+		// and returns false immediately, so the file is skipped silently.
+		tinyThreshold := 1
 		tinyCfg := config.Config{TokenThreshold: tinyThreshold}
 
 		chatFn := func(cfg config.Config, msgs []history.Message) (string, error) {
-			return goFile, nil
+			return goFile, nil // Pass-1: select this file (micro-pass never reached)
 		}
 		msgs, err := buildInjectedMessages(root, "budget query", tinyCfg, chatFn, "")
 		if err != nil {
@@ -330,12 +331,12 @@ func TestBuildInjectedMessages(t *testing.T) {
 		if len(msgs) != 1 || msgs[0].Role != "user" {
 			t.Fatalf("expected one user-role message, got %+v", msgs)
 		}
-		// Content should contain signature fallback text (symbols only), not the raw source
+		// File should be skipped — no file content injected (budget exhausted)
 		if strings.Contains(msgs[0].Content, "func BigFunc() {}") {
-			t.Errorf("did not expect raw file content in budget-exceeded case, got: %q", msgs[0].Content)
+			t.Errorf("did not expect file content when budget=0, got: %q", msgs[0].Content)
 		}
-		if !strings.Contains(msgs[0].Content, "BigFunc") {
-			t.Errorf("expected symbol name in fallback content, got: %q", msgs[0].Content)
+		if strings.Contains(msgs[0].Content, "big.go") {
+			t.Errorf("did not expect file reference when budget=0, got: %q", msgs[0].Content)
 		}
 	})
 
@@ -353,8 +354,8 @@ func TestBuildInjectedMessages(t *testing.T) {
 		}
 		idx := scanner.Index{
 			Files: []scanner.FileEntry{
-				{Path: file1, Package: "main", ExportedSymbols: []string{"Alpha"}, TokenCount: 5},
-				{Path: file2, Package: "main", ExportedSymbols: []string{"Beta"}, TokenCount: 5},
+				{Path: file1, Package: "main", Symbols: []string{"func Alpha"}, TokenCount: 5},
+				{Path: file2, Package: "main", Symbols: []string{"func Beta"}, TokenCount: 5},
 			},
 		}
 		writeIndexFile(t, root, idx)
@@ -396,6 +397,211 @@ func TestBuildInjectedMessages(t *testing.T) {
 		}
 		if len(msgs) != 1 || msgs[0].Role != "user" || msgs[0].Content != "no summaries query" {
 			t.Fatalf("expected bare user query message, got %+v", msgs)
+		}
+	})
+}
+
+// writeTempGoFile creates a temp Go file with the given content in a temp dir.
+// Returns the dir and the full path to the file.
+func writeTempGoFile(t *testing.T, content string) (dir, path string) {
+	t.Helper()
+	dir = t.TempDir()
+	path = filepath.Join(dir, "myfile.go")
+	if err := os.WriteFile(path, []byte(content), 0644); err != nil {
+		t.Fatal(err)
+	}
+	return dir, path
+}
+
+// TestMicroPassFile covers the full fallback chain of microPassFile.
+func TestMicroPassFile(t *testing.T) {
+	goContent := "package foo\n\nfunc Alpha() {\n\tx := 1\n\t_ = x\n}\n\nfunc Beta() {}\n"
+	// goContent line map (1-indexed):
+	// 1: package foo
+	// 2: (blank)
+	// 3: func Alpha() {
+	// 4:     x := 1
+	// 5:     _ = x
+	// 6: }
+	// 7: (blank)
+	// 8: func Beta() {}
+	// 9: (trailing newline split → empty string)
+
+	defaultCfg := config.Config{TokenThreshold: 4000}
+
+	t.Run("model returns valid range — extracted lines returned", func(t *testing.T) {
+		dir, path := writeTempGoFile(t, goContent)
+		chatFn := func(cfg config.Config, msgs []history.Message) (string, error) {
+			return "3-6", nil
+		}
+		content, ok := microPassFile(dir, "myfile.go", "tell me about Alpha", defaultCfg, chatFn, 10000)
+		if !ok {
+			t.Fatal("expected ok=true, got false")
+		}
+		if !strings.Contains(content, "func Alpha() {") {
+			t.Errorf("expected extracted content to contain 'func Alpha() {', got: %q", content)
+		}
+		if !strings.Contains(content, "_ = x") {
+			t.Errorf("expected extracted content to contain '_ = x', got: %q", content)
+		}
+		if strings.Contains(content, "func Beta() {}") {
+			t.Errorf("expected extracted content to NOT contain 'func Beta() {}', got: %q", content)
+		}
+		_ = path
+	})
+
+	t.Run("model returns out-of-bounds range — clamped and returned", func(t *testing.T) {
+		dir, _ := writeTempGoFile(t, goContent)
+		chatFn := func(cfg config.Config, msgs []history.Message) (string, error) {
+			return "0-100", nil // start < 1, end > totalLines
+		}
+		content, ok := microPassFile(dir, "myfile.go", "tell me everything", defaultCfg, chatFn, 10000)
+		if !ok {
+			t.Fatal("expected ok=true after clamping, got false")
+		}
+		if !strings.Contains(content, "package foo") {
+			t.Errorf("expected clamped content to contain 'package foo', got: %q", content)
+		}
+	})
+
+	t.Run("model returns unparseable response — falls back to truncation", func(t *testing.T) {
+		dir, _ := writeTempGoFile(t, goContent)
+		chatFn := func(cfg config.Config, msgs []history.Message) (string, error) {
+			return "not a range", nil
+		}
+		content, ok := microPassFile(dir, "myfile.go", "some query", defaultCfg, chatFn, 10000)
+		if !ok {
+			t.Fatal("expected ok=true via truncation fallback, got false")
+		}
+		if content == "" {
+			t.Error("expected non-empty truncated content, got empty string")
+		}
+	})
+
+	t.Run("model returns start > end — falls back to truncation", func(t *testing.T) {
+		dir, _ := writeTempGoFile(t, goContent)
+		chatFn := func(cfg config.Config, msgs []history.Message) (string, error) {
+			return "6-3", nil // start > end
+		}
+		content, ok := microPassFile(dir, "myfile.go", "some query", defaultCfg, chatFn, 10000)
+		if !ok {
+			t.Fatal("expected ok=true via truncation fallback, got false")
+		}
+		if content == "" {
+			t.Error("expected non-empty truncated content, got empty string")
+		}
+	})
+
+	t.Run("extracted range exceeds budget — falls back to truncation, budget too small → ok=false", func(t *testing.T) {
+		dir, _ := writeTempGoFile(t, goContent)
+		chatFn := func(cfg config.Config, msgs []history.Message) (string, error) {
+			return "1-9", nil // whole file
+		}
+		// budget=1: nothing fits via micro-pass, truncation also fails
+		content, ok := microPassFile(dir, "myfile.go", "some query", defaultCfg, chatFn, 1)
+		if ok {
+			t.Errorf("expected ok=false when budget=1 too small for any content, got content=%q", content)
+		}
+	})
+
+	t.Run("budget=0 — returns false immediately", func(t *testing.T) {
+		dir, _ := writeTempGoFile(t, goContent)
+		chatFn := func(cfg config.Config, msgs []history.Message) (string, error) {
+			return "3-6", nil
+		}
+		content, ok := microPassFile(dir, "myfile.go", "some query", defaultCfg, chatFn, 0)
+		if ok || content != "" {
+			t.Errorf("expected ok=false and empty content for budget=0, got ok=%v content=%q", ok, content)
+		}
+	})
+
+	t.Run("chatFn error — falls back to truncation", func(t *testing.T) {
+		dir, _ := writeTempGoFile(t, goContent)
+		chatFn := func(cfg config.Config, msgs []history.Message) (string, error) {
+			return "", errors.New("llm offline")
+		}
+		content, ok := microPassFile(dir, "myfile.go", "some query", defaultCfg, chatFn, 10000)
+		if !ok {
+			t.Fatal("expected ok=true via truncation fallback after chatFn error, got false")
+		}
+		if content == "" {
+			t.Error("expected non-empty truncated content, got empty string")
+		}
+	})
+
+	t.Run("non-Go file — falls back to truncation", func(t *testing.T) {
+		dir := t.TempDir()
+		txtPath := filepath.Join(dir, "myfile.go") // named .go but invalid Go syntax
+		if err := os.WriteFile(txtPath, []byte("This is a plain text file\nwith no Go syntax\n"), 0644); err != nil {
+			t.Fatal(err)
+		}
+		chatFn := func(cfg config.Config, msgs []history.Message) (string, error) {
+			return "1-2", nil
+		}
+		content, ok := microPassFile(dir, "myfile.go", "some query", defaultCfg, chatFn, 10000)
+		if !ok {
+			t.Fatal("expected ok=true via truncation fallback for non-Go file, got false")
+		}
+		if content == "" {
+			t.Error("expected non-empty truncated content, got empty string")
+		}
+	})
+}
+
+// TestBuildInjectedMessages_NoSymbolBlock verifies that the symbol-block
+// fallback (ExportedSymbols/UnexportedSymbols) is gone and micro-pass is used.
+func TestBuildInjectedMessages_NoSymbolBlock(t *testing.T) {
+	t.Run("large file uses micro-pass not symbol block", func(t *testing.T) {
+		root := t.TempDir()
+
+		// Create src/ subdir and big.go with actual Go content
+		srcDir := filepath.Join(root, "src")
+		if err := os.MkdirAll(srcDir, 0755); err != nil {
+			t.Fatal(err)
+		}
+		bigContent := "package main\n\nfunc BigFn() {\n\tx := 42\n\t_ = x\n}\n"
+		bigPath := filepath.Join(srcDir, "big.go")
+		if err := os.WriteFile(bigPath, []byte(bigContent), 0644); err != nil {
+			t.Fatal(err)
+		}
+
+		// Index references the file
+		idx := scanner.Index{
+			Files: []scanner.FileEntry{{
+				Path:       "src/big.go",
+				Package:    "main",
+				Symbols:    []string{"func BigFn"},
+				TokenCount: 10,
+			}},
+		}
+		writeIndexFile(t, root, idx)
+
+		// Use a threshold where raw content doesn't fit but micro-pass range (lines 3-6) does.
+		// Raw content is ~10 tokens. Budget at 80% of 12 = 9. Micro-pass returns "3-6"
+		// which is "func BigFn() {\n\tx := 42\n\t_ = x\n}" (~6 tokens, fits).
+		tinyCfg := config.Config{TokenThreshold: 12}
+
+		callCount := 0
+		chatFn := func(cfg config.Config, msgs []history.Message) (string, error) {
+			callCount++
+			if callCount == 1 {
+				return "src/big.go", nil // Pass-1
+			}
+			return "3-6", nil // micro-pass line range
+		}
+
+		msgs, err := buildInjectedMessages(root, "what does BigFn do", tinyCfg, chatFn, "")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if len(msgs) != 1 || msgs[0].Role != "user" {
+			t.Fatalf("expected one user-role message, got %+v", msgs)
+		}
+		if !strings.Contains(msgs[0].Content, "src/big.go") {
+			t.Errorf("expected content to reference src/big.go, got: %q", msgs[0].Content)
+		}
+		if strings.Contains(msgs[0].Content, "// Exported:") || strings.Contains(msgs[0].Content, "// Unexported:") {
+			t.Errorf("symbol-block strings must not appear after removal, got: %q", msgs[0].Content)
 		}
 	})
 }
