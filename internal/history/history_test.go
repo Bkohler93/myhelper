@@ -97,3 +97,52 @@ func TestHistory_Messages_Order(t *testing.T) {
 		t.Errorf("expected second message {assistant, b}, got %+v", msgs[1])
 	}
 }
+
+func TestHistory_Replace(t *testing.T) {
+	t.Run("replaces all messages with provided slice", func(t *testing.T) {
+		h := history.New(4100, nil)
+		h.Add("user", "original")
+		h.Replace([]history.Message{
+			{Role: "system", Content: "Summary of previous conversation: xyz"},
+		})
+		msgs := h.Messages()
+		if len(msgs) != 1 {
+			t.Fatalf("expected 1 message after Replace, got %d", len(msgs))
+		}
+		if msgs[0].Role != "system" || msgs[0].Content != "Summary of previous conversation: xyz" {
+			t.Errorf("unexpected message after Replace: %+v", msgs[0])
+		}
+	})
+
+	t.Run("replace with three messages preserves order", func(t *testing.T) {
+		h := history.New(4100, nil)
+		h.Replace([]history.Message{
+			{Role: "system", Content: "sys"},
+			{Role: "user", Content: "u"},
+			{Role: "assistant", Content: "a"},
+		})
+		msgs := h.Messages()
+		if len(msgs) != 3 {
+			t.Fatalf("expected 3 messages, got %d", len(msgs))
+		}
+	})
+
+	t.Run("replace with empty slice yields empty messages", func(t *testing.T) {
+		h := history.New(4100, nil)
+		h.Add("user", "something")
+		h.Replace([]history.Message{})
+		if len(h.Messages()) != 0 {
+			t.Fatalf("expected 0 messages after Replace with empty, got %d", len(h.Messages()))
+		}
+	})
+
+	t.Run("messages after replace are a copy (mutation-safe)", func(t *testing.T) {
+		h := history.New(4100, nil)
+		h.Replace([]history.Message{{Role: "user", Content: "original"}})
+		msgs := h.Messages()
+		msgs[0].Content = "mutated"
+		if h.Messages()[0].Content != "original" {
+			t.Error("Replace internal state is not copy-safe: mutation via Messages() affected internal state")
+		}
+	})
+}

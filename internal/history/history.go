@@ -49,6 +49,14 @@ func (h *History) Messages() []Message {
 	return out
 }
 
+// Replace discards the current message slice and replaces it with a copy of
+// the provided messages. The caller is responsible for ensuring the system
+// message at index [0] is preserved in the new slice when required.
+func (h *History) Replace(messages []Message) {
+	h.messages = make([]Message, len(messages))
+	copy(h.messages, messages)
+}
+
 // TokenCount returns the total number of tokens across all message contents
 // using the cl100k_base tiktoken encoder.
 func (h *History) TokenCount() int {
