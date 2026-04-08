@@ -80,13 +80,11 @@ Plans:
   1. Running any query command (plan, lookup, starter, pattern) injects index.json into a Pass-1 message, receives a file list from the model, and then injects those files' summaries/content before the final answer
   2. File paths returned by the model in Pass 1 are validated with os.Stat; invalid paths are discarded silently; if no valid paths survive the entire summaries directory is injected as fallback
   3. Injected file content appears in user-role messages only — never in the system message — so existing summarization behavior is not disrupted
-**Plans**: 3 plans
+**Plans**: 2 plans
 
 Plans:
-- [x] 06-01-PLAN.md — Bubble Tea TUI (RunWithSpinner) + shared helpers (generateContextMD, readLastSync, writeLastSync)
-- [x] 06-02-PLAN.md — init command rewrite: full scan + context.md generation under spinner
-- [x] 06-03-PLAN.md — sync command: delta rescan via mtime, index merge, selective summary regeneration
-**UI hint**: no
+- [ ] 07-01-PLAN.md — buildInjectedMessages helper + tests (Pass-1 logic, path validation, token budget, fallbacks)
+- [ ] 07-02-PLAN.md — Wire buildInjectedMessages into all 4 query commands (plan, lookup, starter, pattern)
 
 ### Phase 8: Large File Micro-Pass
 **Goal**: Files that exceed the context budget are handled gracefully via symbol-level line-range extraction rather than raw truncation
@@ -95,12 +93,7 @@ Plans:
 **Success Criteria** (what must be TRUE):
   1. When a selected file exceeds the context budget, go/ast generates a symbol map and the model is asked for a specific line range rather than receiving the full file
   2. When line-range extraction is not possible or the range still exceeds the budget, the content is truncated at a safe boundary as a final fallback with no panic or error surfaced to the user
-**Plans**: 3 plans
-
-Plans:
-- [x] 06-01-PLAN.md — Bubble Tea TUI (RunWithSpinner) + shared helpers (generateContextMD, readLastSync, writeLastSync)
-- [ ] 06-02-PLAN.md — init command rewrite: full scan + context.md generation under spinner
-- [ ] 06-03-PLAN.md — sync command: delta rescan via mtime, index merge, selective summary regeneration
+**Plans**: TBD
 
 ## Progress
 
@@ -112,5 +105,5 @@ Plans:
 | 4. Summarization & Re-condensation | v1.1 | 2/2 | Complete | 2026-04-08 |
 | 5. Scanner & Index Generation | v1.2 | 0/5 | Not started | - |
 | 6. init + sync Commands | v1.2 | 3/3 | Complete   | 2026-04-08 |
-| 7. Two-Pass Context Injection | v1.2 | 0/? | Not started | - |
+| 7. Two-Pass Context Injection | v1.2 | 0/2 | Not started | - |
 | 8. Large File Micro-Pass | v1.2 | 0/? | Not started | - |
