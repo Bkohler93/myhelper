@@ -34,18 +34,31 @@ func writeGoFile(t *testing.T, root, relPath, content string) {
 	}
 }
 
-// readIndex parses .myhelper/index.json in root and returns the []FileEntry.
-func readIndex(t *testing.T, root string) []FileEntry {
+// indexWrapper is a local struct for reading the new index.json schema.
+// It mirrors the Index struct added to scanner.go.
+type indexWrapper struct {
+	Meta  ProjectMeta `json:"meta"`
+	Files []FileEntry `json:"files"`
+}
+
+// readIndexFull parses .myhelper/index.json and returns the full Index-shaped struct.
+func readIndexFull(t *testing.T, root string) indexWrapper {
 	t.Helper()
 	data, err := os.ReadFile(filepath.Join(root, ".myhelper", "index.json"))
 	if err != nil {
-		t.Fatalf("readIndex: %v", err)
+		t.Fatalf("readIndexFull: %v", err)
 	}
-	var entries []FileEntry
-	if err := json.Unmarshal(data, &entries); err != nil {
-		t.Fatalf("readIndex: unmarshal: %v", err)
+	var idx indexWrapper
+	if err := json.Unmarshal(data, &idx); err != nil {
+		t.Fatalf("readIndexFull: unmarshal: %v", err)
 	}
-	return entries
+	return idx
+}
+
+// readIndex parses .myhelper/index.json in root and returns the []FileEntry.
+func readIndex(t *testing.T, root string) []FileEntry {
+	t.Helper()
+	return readIndexFull(t, root).Files
 }
 
 func defaultCfg() config.Config {
@@ -239,9 +252,9 @@ func Hello() string { return "hello" }
 	if err != nil {
 		t.Fatalf("read index.json: %v", err)
 	}
-	var entries []FileEntry
-	if err := json.Unmarshal(data, &entries); err != nil {
-		t.Errorf("index.json is not a valid JSON array: %v", err)
+	var idx indexWrapper
+	if err := json.Unmarshal(data, &idx); err != nil {
+		t.Errorf("index.json is not a valid JSON object with meta+files: %v", err)
 	}
 }
 
@@ -260,13 +273,49 @@ func TestBuildIndex_NoGoFiles(t *testing.T) {
 		t.Errorf("expected 0 entries, got %d", len(entries))
 	}
 
-	data, err := os.ReadFile(filepath.Join(root, ".myhelper", "index.json"))
-	if err != nil {
-		t.Fatalf("read index.json: %v", err)
+	idx := readIndexFull(t, root)
+	if len(idx.Files) != 0 {
+		t.Errorf("index.json files = %d, want empty", len(idx.Files))
 	}
-	// json.MarshalIndent([]FileEntry{}, ...) produces "[]"
-	trimmed := strings.TrimSpace(string(data))
-	if trimmed != "[]" {
-		t.Errorf("index.json = %q, want '[]'", trimmed)
+}
+
+// TestBuildIndex_MetaModuleName verifies that after BuildIndex, index.json contains
+// the project module name under meta.module_name.
+func TestBuildIndex_MetaModuleName(t *testing.T) {
+	root := mkTempProject(t)
+	writeGoFile(t, root, "go.mod", "module example.com/myapp\n\ngo 1.21\n")
+	writeGoFile(t, root, "foo.go", "package foo\nfunc Foo() {}\n")
+
+	cfg := defaultCfg()
+	_, err := BuildIndex(root, cfg)
+	if err != nil {
+		t.Fatalf("BuildIndex: %v", err)
+	}
+
+	idx := readIndexFull(t, root)
+	if idx.Meta.ModuleName != "example.com/myapp" {
+		t.Errorf("meta.ModuleName = %q, want %q", idx.Meta.ModuleName, "example.com/myapp")
+	}
+	if len(idx.Files) != 1 {
+		t.Errorf("expected 1 file entry, got %d", len(idx.Files))
+	}
+}
+
+// TestBuildIndex_MetaReadmeContent verifies that after BuildIndex, index.json contains
+// the README content under meta.readme_content.
+func TestBuildIndex_MetaReadmeContent(t *testing.T) {
+	root := mkTempProject(t)
+	writeGoFile(t, root, "README.md", "# MyApp\nA test project.\n")
+	writeGoFile(t, root, "bar.go", "package bar\nfunc Bar() {}\n")
+
+	cfg := defaultCfg()
+	_, err := BuildIndex(root, cfg)
+	if err != nil {
+		t.Fatalf("BuildIndex: %v", err)
+	}
+
+	idx := readIndexFull(t, root)
+	if !strings.Contains(idx.Meta.ReadmeContent, "MyApp") {
+		t.Errorf("meta.ReadmeContent = %q, want it to contain %q", idx.Meta.ReadmeContent, "MyApp")
 	}
 }

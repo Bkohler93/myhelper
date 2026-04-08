@@ -68,12 +68,19 @@ func BuildIndex(root string, cfg config.Config) ([]FileEntry, error) {
 	}
 	entries = entries[:cutoff]
 
-	// Serialize to JSON array and write to .myhelper/index.json.
+	// Serialize to JSON object and write to .myhelper/index.json.
 	// json.MarshalIndent on a nil slice produces "null"; use empty slice to get "[]".
 	if entries == nil {
 		entries = []FileEntry{}
 	}
-	out, err := json.MarshalIndent(entries, "", "  ")
+
+	meta, metaErr := ReadMeta(root)
+	if metaErr != nil {
+		fmt.Fprintf(os.Stderr, "scanner: ReadMeta: %v\n", metaErr)
+	}
+
+	idx := Index{Meta: meta, Files: entries}
+	out, err := json.MarshalIndent(idx, "", "  ")
 	if err != nil {
 		return entries, fmt.Errorf("BuildIndex: marshal: %w", err)
 	}

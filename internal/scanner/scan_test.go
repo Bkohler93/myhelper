@@ -33,8 +33,27 @@ func setupTempProject(t *testing.T) (root string, fakeFn scanner.ChatFn, calls *
 	return root, fn, &counter
 }
 
+// indexDoc is a local helper struct matching the index.json schema.
+type indexDoc struct {
+	Files []scanner.FileEntry `json:"files"`
+}
+
+// readIndexEntries reads .myhelper/index.json and returns the files array.
+func readIndexEntries(t *testing.T, root string) []scanner.FileEntry {
+	t.Helper()
+	data, err := os.ReadFile(filepath.Join(root, ".myhelper", "index.json"))
+	if err != nil {
+		t.Fatalf("readIndexEntries: %v", err)
+	}
+	var doc indexDoc
+	if err := json.Unmarshal(data, &doc); err != nil {
+		t.Fatalf("readIndexEntries: unmarshal: %v", err)
+	}
+	return doc.Files
+}
+
 // TestScan_IndexJSONCreated verifies that Scan() creates .myhelper/index.json
-// as a non-empty valid JSON array.
+// as a non-empty valid JSON object with a files array.
 func TestScan_IndexJSONCreated(t *testing.T) {
 	root, fakeFn, _ := setupTempProject(t)
 	cfg := config.Config{TokenThreshold: 4100}
@@ -43,21 +62,9 @@ func TestScan_IndexJSONCreated(t *testing.T) {
 		t.Fatalf("Scan() error: %v", err)
 	}
 
-	indexPath := filepath.Join(root, ".myhelper", "index.json")
-	data, err := os.ReadFile(indexPath)
-	if err != nil {
-		t.Fatalf("index.json not found: %v", err)
-	}
-	if len(data) == 0 {
-		t.Fatal("index.json is empty")
-	}
-
-	var entries []scanner.FileEntry
-	if err := json.Unmarshal(data, &entries); err != nil {
-		t.Fatalf("index.json is not valid JSON: %v", err)
-	}
+	entries := readIndexEntries(t, root)
 	if len(entries) == 0 {
-		t.Fatal("index.json contains empty array, expected at least one entry")
+		t.Fatal("index.json contains empty files array, expected at least one entry")
 	}
 }
 
@@ -90,16 +97,7 @@ func TestScan_EntryFieldsPopulated(t *testing.T) {
 		t.Fatalf("Scan() error: %v", err)
 	}
 
-	indexPath := filepath.Join(root, ".myhelper", "index.json")
-	data, err := os.ReadFile(indexPath)
-	if err != nil {
-		t.Fatalf("index.json not found: %v", err)
-	}
-
-	var entries []scanner.FileEntry
-	if err := json.Unmarshal(data, &entries); err != nil {
-		t.Fatalf("json.Unmarshal: %v", err)
-	}
+	entries := readIndexEntries(t, root)
 
 	found := false
 	for _, e := range entries {
@@ -140,16 +138,7 @@ func TestScan_GitDirExcluded(t *testing.T) {
 		t.Fatalf("Scan() error: %v", err)
 	}
 
-	indexPath := filepath.Join(root, ".myhelper", "index.json")
-	data, err := os.ReadFile(indexPath)
-	if err != nil {
-		t.Fatalf("index.json not found: %v", err)
-	}
-
-	var entries []scanner.FileEntry
-	if err := json.Unmarshal(data, &entries); err != nil {
-		t.Fatalf("json.Unmarshal: %v", err)
-	}
+	entries := readIndexEntries(t, root)
 
 	for _, e := range entries {
 		if filepath.HasPrefix(e.Path, ".git") || (len(e.Path) > 4 && e.Path[:4] == ".git") {

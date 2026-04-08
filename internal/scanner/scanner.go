@@ -16,3 +16,10 @@ type FileEntry struct {
 	Symbols    []string `json:"symbols"`
 	TokenCount int      `json:"token_count"`
 }
+
+// Index is the top-level structure written to .myhelper/index.json.
+// Meta holds project-level metadata; Files holds per-file entries.
+type Index struct {
+	Meta  ProjectMeta `json:"meta"`
+	Files []FileEntry `json:"files"`
+}
