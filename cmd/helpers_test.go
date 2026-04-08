@@ -53,7 +53,7 @@ func TestRunConversationLoop(t *testing.T) {
 		restore := replaceStdin(t, "quit\n")
 		defer restore()
 
-		err := runConversationLoop(config.Config{}, hist, fs.call)
+		err := runConversationLoop(config.Config{}, hist, fs.call, "", "")
 		if err != nil {
 			t.Fatalf("expected nil error, got %v", err)
 		}
@@ -69,7 +69,7 @@ func TestRunConversationLoop(t *testing.T) {
 		restore := replaceStdin(t, "\nquit\n")
 		defer restore()
 
-		err := runConversationLoop(config.Config{}, hist, fs.call)
+		err := runConversationLoop(config.Config{}, hist, fs.call, "", "")
 		if err != nil {
 			t.Fatalf("expected nil error, got %v", err)
 		}
@@ -84,7 +84,7 @@ func TestRunConversationLoop(t *testing.T) {
 		restore := replaceStdin(t, "hello\nquit\n")
 		defer restore()
 
-		err := runConversationLoop(config.Config{}, hist, fs.call)
+		err := runConversationLoop(config.Config{}, hist, fs.call, "", "")
 		if err != nil {
 			t.Fatalf("expected nil error, got %v", err)
 		}
@@ -110,7 +110,7 @@ func TestRunConversationLoop(t *testing.T) {
 		restore := replaceStdin(t, "some input\n")
 		defer restore()
 
-		err := runConversationLoop(config.Config{}, hist, fs.call)
+		err := runConversationLoop(config.Config{}, hist, fs.call, "", "")
 		if err == nil {
 			t.Fatal("expected error, got nil")
 		}
@@ -132,7 +132,7 @@ func TestRunConversationLoop(t *testing.T) {
 
 		done := make(chan error, 1)
 		go func() {
-			done <- runConversationLoop(config.Config{}, hist, fs.call)
+			done <- runConversationLoop(config.Config{}, hist, fs.call, "", "")
 		}()
 
 		// Give the goroutine time to block on stdin, then send SIGINT.
@@ -150,6 +150,30 @@ func TestRunConversationLoop(t *testing.T) {
 
 		if fs.called != 0 {
 			t.Fatalf("expected streamFn not called on SIGINT, called %d times", fs.called)
+		}
+	})
+}
+
+// TestRunConversationLoop_Summarization covers summarization behavior.
+func TestRunConversationLoop_Summarization(t *testing.T) {
+	t.Run("does not summarize when history is within limit", func(t *testing.T) {
+		fs := &fakeStream{responses: []string{"response1"}}
+		// Threshold very high — never triggers
+		hist := history.New(999999, []history.Message{
+			{Role: "system", Content: "system prompt"},
+			{Role: "user", Content: "initial question"},
+			{Role: "assistant", Content: "initial answer"},
+		})
+		restore := replaceStdin(t, "follow-up\nquit\n")
+		defer restore()
+
+		err := runConversationLoop(config.Config{}, hist, fs.call, "summarize prompt", "recondense prompt")
+		if err != nil {
+			t.Fatalf("expected nil error, got %v", err)
+		}
+		// streamFn called once for the follow-up (not for summarization)
+		if fs.called != 1 {
+			t.Fatalf("expected streamFn called once, got %d", fs.called)
 		}
 	})
 }
