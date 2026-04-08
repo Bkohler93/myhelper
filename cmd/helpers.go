@@ -13,6 +13,7 @@ import (
 
 	"github.com/bkohler93/myhelper/internal/config"
 	"github.com/bkohler93/myhelper/internal/history"
+	"github.com/bkohler93/myhelper/internal/ollama"
 )
 
 // stdinReader is the source of input for the conversation loop.
@@ -89,10 +90,14 @@ func initiateConversation(cfg config.Config, hist *history.History, streamFn fun
 // Per D-03: SIGINT installs os/signal handler; exits cleanly.
 // Per D-04: "quit" detected before model call; exits cleanly.
 // Per D-05: loop lives here; all 4 commands call this.
+// Per D-07: ExceedsLimit() checked at top of loop; summarize() called when true.
+// Per D-08: "[Condensing history...]" printed to stderr before summarization.
 func runConversationLoop(
 	cfg config.Config,
 	hist *history.History,
 	streamFn func(config.Config, []history.Message) (string, error),
+	summarizePrompt string,
+	recondensePrompt string,
 ) error {
 	// Install SIGINT handler (per D-03).
 	sigCh := make(chan os.Signal, 1)
@@ -107,6 +112,14 @@ func runConversationLoop(
 		case <-sigCh:
 			return nil
 		default:
+		}
+
+		// Summarize history if token threshold exceeded (per D-07, D-08).
+		if hist.ExceedsLimit() {
+			fmt.Fprint(os.Stderr, "[Condensing history...]\n")
+			if err := summarize(cfg, hist, summarizePrompt, recondensePrompt); err != nil {
+				return err
+			}
 		}
 
 		fmt.Fprint(os.Stderr, "> ") // per D-01
@@ -152,4 +165,55 @@ func runConversationLoop(
 		}
 		hist.Add("assistant", response)
 	}
+}
+
+// summarize compresses history when the token threshold is exceeded.
+// It detects re-condensation by checking for an existing summary message.
+// The system message at index [0] is always preserved.
+//
+// Per D-06: re-condensation detected by "Summary of previous conversation:" prefix.
+// Per D-09: if len(msgs) < 5, nothing meaningful to compress; returns nil.
+func summarize(cfg config.Config, hist *history.History, summarizePrompt, recondensePrompt string) error {
+	msgs := hist.Messages()
+	// msgs[0] is the system prompt — never summarized.
+	// The last two messages are the most recent user+assistant exchange — kept verbatim.
+	// Everything between [1] and [len-3] (inclusive) is the candidate for summarization.
+
+	// Detect re-condensation: is there already a summary message in the slice?
+	prompt := summarizePrompt
+	for _, m := range msgs[1:] {
+		if m.Role == "system" && strings.HasPrefix(m.Content, "Summary of previous conversation:") {
+			prompt = recondensePrompt
+			break
+		}
+	}
+
+	// Safe to summarize only if there are at least 5 messages (system + ≥1 exchange before final pair).
+	// If only [system, user, assistant] exist (3 messages), there is nothing to compress separately
+	// from the final exchange — return nil.
+	if len(msgs) < 5 {
+		return nil
+	}
+
+	finalPair := msgs[len(msgs)-2:] // last user + last assistant
+	candidates := msgs[1 : len(msgs)-2] // everything between system and final pair
+
+	summarizeMessages := make([]history.Message, 0, len(candidates)+1)
+	summarizeMessages = append(summarizeMessages, candidates...)
+	summarizeMessages = append(summarizeMessages, history.Message{Role: "user", Content: prompt})
+
+	summaryText, err := ollama.Chat(cfg, summarizeMessages)
+	if err != nil {
+		return fmt.Errorf("summarize: %w", err)
+	}
+
+	newMessages := make([]history.Message, 0, 4)
+	newMessages = append(newMessages, msgs[0]) // original system message
+	newMessages = append(newMessages, history.Message{
+		Role:    "system",
+		Content: "Summary of previous conversation: " + summaryText,
+	})
+	newMessages = append(newMessages, finalPair...)
+	hist.Replace(newMessages)
+	return nil
 }

@@ -48,6 +48,6 @@ func runStarter(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	err = runConversationLoop(cfg, hist, ollama.StreamChat)
+	err = runConversationLoop(cfg, hist, ollama.StreamChat, starterSummarizePrompt, starterRecondensePrompt)
 	return err
 }

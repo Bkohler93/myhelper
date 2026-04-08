@@ -49,6 +49,6 @@ func runPlan(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	err = runConversationLoop(cfg, h, ollama.StreamChat)
+	err = runConversationLoop(cfg, h, ollama.StreamChat, planSummarizePrompt, planRecondensePrompt)
 	return err
 }

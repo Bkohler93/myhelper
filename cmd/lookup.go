@@ -48,6 +48,6 @@ func runLookup(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	err = runConversationLoop(cfg, hist, ollama.StreamChat)
+	err = runConversationLoop(cfg, hist, ollama.StreamChat, lookupSummarizePrompt, lookupRecondensePrompt)
 	return err
 }
