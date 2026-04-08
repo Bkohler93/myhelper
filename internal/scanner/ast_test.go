@@ -6,6 +6,147 @@ import (
 	"testing"
 )
 
+func TestExtractSymbolMap(t *testing.T) {
+	writeGoFile := func(t *testing.T, content string) string {
+		t.Helper()
+		dir := t.TempDir()
+		path := filepath.Join(dir, "test.go")
+		if err := os.WriteFile(path, []byte(content), 0644); err != nil {
+			t.Fatal(err)
+		}
+		return path
+	}
+
+	t.Run("exported func has correct name and line range", func(t *testing.T) {
+		src := "package foo\n\nfunc Exported() {}\n"
+		path := writeGoFile(t, src)
+		symbols, err := ExtractSymbolMap(path)
+		if err != nil {
+			t.Fatalf("ExtractSymbolMap() error: %v", err)
+		}
+		if len(symbols) != 1 {
+			t.Fatalf("expected 1 symbol, got %d: %v", len(symbols), symbols)
+		}
+		if symbols[0].Name != "func Exported" {
+			t.Errorf("expected Name 'func Exported', got %q", symbols[0].Name)
+		}
+		if symbols[0].Start != 3 {
+			t.Errorf("expected Start 3, got %d", symbols[0].Start)
+		}
+		if symbols[0].End != 3 {
+			t.Errorf("expected End 3, got %d", symbols[0].End)
+		}
+	})
+
+	t.Run("unexported func included with correct name", func(t *testing.T) {
+		src := "package foo\n\nfunc unexported() {}\n"
+		path := writeGoFile(t, src)
+		symbols, err := ExtractSymbolMap(path)
+		if err != nil {
+			t.Fatalf("ExtractSymbolMap() error: %v", err)
+		}
+		if len(symbols) != 1 {
+			t.Fatalf("expected 1 symbol, got %d: %v", len(symbols), symbols)
+		}
+		if symbols[0].Name != "func unexported" {
+			t.Errorf("expected Name 'func unexported', got %q", symbols[0].Name)
+		}
+		if symbols[0].Start != 3 {
+			t.Errorf("expected Start 3, got %d", symbols[0].Start)
+		}
+		if symbols[0].End != 3 {
+			t.Errorf("expected End 3, got %d", symbols[0].End)
+		}
+	})
+
+	t.Run("exported struct type included", func(t *testing.T) {
+		src := "package foo\n\ntype MyStruct struct {\n\tField string\n}\n"
+		path := writeGoFile(t, src)
+		symbols, err := ExtractSymbolMap(path)
+		if err != nil {
+			t.Fatalf("ExtractSymbolMap() error: %v", err)
+		}
+		if len(symbols) != 1 {
+			t.Fatalf("expected 1 symbol, got %d: %v", len(symbols), symbols)
+		}
+		if symbols[0].Name != "type MyStruct struct" {
+			t.Errorf("expected Name 'type MyStruct struct', got %q", symbols[0].Name)
+		}
+		if symbols[0].Start != 3 {
+			t.Errorf("expected Start 3, got %d", symbols[0].Start)
+		}
+	})
+
+	t.Run("exported interface type included", func(t *testing.T) {
+		src := "package foo\n\ntype MyInterface interface {\n\tDoThing() error\n}\n"
+		path := writeGoFile(t, src)
+		symbols, err := ExtractSymbolMap(path)
+		if err != nil {
+			t.Fatalf("ExtractSymbolMap() error: %v", err)
+		}
+		if len(symbols) != 1 {
+			t.Fatalf("expected 1 symbol, got %d: %v", len(symbols), symbols)
+		}
+		if symbols[0].Name != "type MyInterface interface" {
+			t.Errorf("expected Name 'type MyInterface interface', got %q", symbols[0].Name)
+		}
+		if symbols[0].Start != 3 {
+			t.Errorf("expected Start 3, got %d", symbols[0].Start)
+		}
+	})
+
+	t.Run("unexported struct NOT included", func(t *testing.T) {
+		src := "package foo\n\ntype internal struct {\n\tx int\n}\n"
+		path := writeGoFile(t, src)
+		symbols, err := ExtractSymbolMap(path)
+		if err != nil {
+			t.Fatalf("ExtractSymbolMap() error: %v", err)
+		}
+		if len(symbols) != 0 {
+			t.Errorf("expected 0 symbols, got %d: %v", len(symbols), symbols)
+		}
+	})
+
+	t.Run("multi-line func body - End line > Start line", func(t *testing.T) {
+		src := "package foo\n\nfunc BigFunc() {\n\tx := 1\n\t_ = x\n}\n"
+		path := writeGoFile(t, src)
+		symbols, err := ExtractSymbolMap(path)
+		if err != nil {
+			t.Fatalf("ExtractSymbolMap() error: %v", err)
+		}
+		if len(symbols) != 1 {
+			t.Fatalf("expected 1 symbol, got %d: %v", len(symbols), symbols)
+		}
+		if symbols[0].Start != 3 {
+			t.Errorf("expected Start 3, got %d", symbols[0].Start)
+		}
+		if symbols[0].End != 6 {
+			t.Errorf("expected End 6, got %d", symbols[0].End)
+		}
+	})
+
+	t.Run("syntax error returns error not panic", func(t *testing.T) {
+		src := "package foo\nfunc Broken( {"
+		path := writeGoFile(t, src)
+		_, err := ExtractSymbolMap(path)
+		if err == nil {
+			t.Error("expected error for syntax error file, got nil")
+		}
+	})
+
+	t.Run("exported const and var excluded", func(t *testing.T) {
+		src := "package foo\n\nconst ExportedConst = 1\nvar ExportedVar = \"x\"\n"
+		path := writeGoFile(t, src)
+		symbols, err := ExtractSymbolMap(path)
+		if err != nil {
+			t.Fatalf("ExtractSymbolMap() error: %v", err)
+		}
+		if len(symbols) != 0 {
+			t.Errorf("expected 0 symbols, got %d: %v", len(symbols), symbols)
+		}
+	})
+}
+
 func TestExtractSymbols(t *testing.T) {
 	writeGoFile := func(t *testing.T, content string) string {
 		t.Helper()
