@@ -35,9 +35,9 @@ func ReadMeta(root string) (ProjectMeta, error) {
 	}
 	if err == nil {
 		inRequire := false
-		scanner := bufio.NewScanner(strings.NewReader(string(gomodData)))
-		for scanner.Scan() {
-			line := scanner.Text()
+		sc := bufio.NewScanner(strings.NewReader(string(gomodData)))
+		for sc.Scan() {
+			line := sc.Text()
 			trimmed := strings.TrimSpace(line)
 
 			if strings.HasPrefix(trimmed, "module ") {
