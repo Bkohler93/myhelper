@@ -10,8 +10,6 @@ import (
 	"github.com/bkohler93/myhelper/internal/history"
 )
 
-const summarySystemPrompt = "You are a Go code analyst. Given a list of exported symbols from a Go package, write a concise design and pattern summary in markdown. Focus on what the package does, its key abstractions, and usage patterns. Be brief — under 200 words."
-
 // GenerateSummaries groups FileEntry objects by package, calls chatFn once per
 // package with a user-role message listing all exported symbols, and writes
 // the resulting summary to .myhelper/summaries/{pkg}.md under root.
