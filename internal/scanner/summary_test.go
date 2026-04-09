@@ -229,3 +229,68 @@ func TestGenerateSummaries_ChatFnError(t *testing.T) {
 		t.Errorf("expected no output file after ChatFn error, but file exists at %s", outPath)
 	}
 }
+
+// Test 9: GenerateSummaries skips packages whose name ends in _test — no file written, no ChatFn call for that package.
+func TestGenerateSummaries_TestPackageSkipped(t *testing.T) {
+	calls := 0
+	fakeChatFn := func(cfg config.Config, msgs []history.Message) (string, error) {
+		calls++
+		return "# Summary", nil
+	}
+
+	root := t.TempDir()
+
+	entries := []FileEntry{
+		{Path: "foo.go", Package: "foo", Symbols: []string{"func A()"}},
+		{Path: "foo_test.go", Package: "foo_test", Symbols: []string{"func TestA(t *testing.T)"}},
+	}
+
+	err := GenerateSummaries(root, entries, config.Config{}, fakeChatFn)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// ChatFn must be called exactly once (for "foo", not "foo_test").
+	if calls != 1 {
+		t.Errorf("expected 1 ChatFn call (foo only), got %d", calls)
+	}
+
+	// foo.md must exist.
+	fooPath := filepath.Join(root, ".myhelper", "summaries", "foo.md")
+	if _, err := os.Stat(fooPath); os.IsNotExist(err) {
+		t.Errorf("expected foo.md to exist, but it does not")
+	}
+
+	// foo_test.md must NOT exist.
+	testPkgPath := filepath.Join(root, ".myhelper", "summaries", "foo_test.md")
+	if _, err := os.Stat(testPkgPath); !os.IsNotExist(err) {
+		t.Errorf("expected foo_test.md to not exist, but it does")
+	}
+}
+
+// Test 10: The prompt passed to ChatFn contains a format directive (stable opening substring of summaryDirective).
+func TestGenerateSummaries_PromptContainsFormatDirective(t *testing.T) {
+	var capturedContent string
+	fakeChatFn := func(cfg config.Config, msgs []history.Message) (string, error) {
+		for _, m := range msgs {
+			capturedContent += m.Content
+		}
+		return "# Summary", nil
+	}
+
+	root := t.TempDir()
+
+	entries := []FileEntry{
+		{Path: "foo.go", Package: "foo", Symbols: []string{"func A()"}},
+	}
+
+	err := GenerateSummaries(root, entries, config.Config{}, fakeChatFn)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	const wantSubstr = "Identify the core purpose"
+	if !strings.Contains(capturedContent, wantSubstr) {
+		t.Errorf("expected prompt to contain %q as format directive, got:\n%s", wantSubstr, capturedContent)
+	}
+}
