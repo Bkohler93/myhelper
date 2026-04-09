@@ -515,6 +515,9 @@ func buildInjectedMessages(root, query string, cfg config.Config, chatFn scanner
 	sb.WriteString("Here is the relevant source code for context:\n")
 
 	for _, path := range validPaths {
+		if usedTokens >= budget {
+			break
+		}
 		rawContent, readErr := os.ReadFile(filepath.Join(root, path))
 		if readErr != nil {
 			continue
