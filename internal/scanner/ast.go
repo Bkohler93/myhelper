@@ -134,6 +134,7 @@ type Symbol struct {
 	Imports   []string `json:"imports"`   // file-level import paths (same value for all symbols in a file)
 	CallEdges []string `json:"callEdges"` // populated by Phase 10 body-walking pass
 	TypeRefs  []string `json:"typeRefs"`  // populated by Phase 10 body-walking pass
+	FilePath  string   `json:"filePath"`  // relative path to the source file
 }
 
 // extractImportPaths returns the import paths declared in f, including blank

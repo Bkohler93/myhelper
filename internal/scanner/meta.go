@@ -16,6 +16,7 @@ type ConfigFile struct {
 // ProjectMeta holds project-level metadata extracted from go.mod, README, and config files.
 type ProjectMeta struct {
 	ModuleName    string       `json:"module_name"`
+	GoVersion     string       `json:"go_version"`
 	DirectDeps    []string     `json:"direct_deps"`
 	ReadmeContent string       `json:"readme_content"`
 	ConfigFiles   []ConfigFile `json:"config_files"`
@@ -42,6 +43,11 @@ func ReadMeta(root string) (ProjectMeta, error) {
 
 			if strings.HasPrefix(trimmed, "module ") {
 				meta.ModuleName = strings.TrimSpace(strings.TrimPrefix(trimmed, "module "))
+				continue
+			}
+
+			if strings.HasPrefix(trimmed, "go ") {
+				meta.GoVersion = strings.TrimSpace(strings.TrimPrefix(trimmed, "go "))
 				continue
 			}
 
