@@ -3,6 +3,7 @@ package scanner
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -143,6 +144,288 @@ func TestExtractSymbolMap(t *testing.T) {
 		}
 		if len(symbols) != 0 {
 			t.Errorf("expected 0 symbols, got %d: %v", len(symbols), symbols)
+		}
+	})
+}
+
+func TestExtractSymbolsFull(t *testing.T) {
+	writeGoFile := func(t *testing.T, content string) string {
+		t.Helper()
+		dir := t.TempDir()
+		path := filepath.Join(dir, "test.go")
+		if err := os.WriteFile(path, []byte(content), 0644); err != nil {
+			t.Fatal(err)
+		}
+		return path
+	}
+
+	t.Run("kind", func(t *testing.T) {
+		src := `package foo
+
+type Server struct{}
+
+func Foo() {}
+func (s *Server) Handle() {}
+
+type Config struct{ Name string }
+type Doer interface{ Do() error }
+`
+		path := writeGoFile(t, src)
+		symbols, err := ExtractSymbolsFull(path)
+		if err != nil {
+			t.Fatalf("ExtractSymbolsFull() error: %v", err)
+		}
+		kindMap := make(map[string]string)
+		for _, sym := range symbols {
+			kindMap[sym.Name] = sym.Kind
+		}
+		cases := []struct {
+			name string
+			want string
+		}{
+			{"Foo", "func"},
+			{"Handle", "method"},
+			{"Config", "struct"},
+			{"Doer", "interface"},
+			{"Server", "struct"},
+		}
+		for _, tc := range cases {
+			got, ok := kindMap[tc.name]
+			if !ok {
+				t.Errorf("symbol %q not found in results", tc.name)
+				continue
+			}
+			if got != tc.want {
+				t.Errorf("symbol %q: Kind=%q, want %q", tc.name, got, tc.want)
+			}
+		}
+	})
+
+	t.Run("signature", func(t *testing.T) {
+		t.Run("func", func(t *testing.T) {
+			src := `package foo
+
+func Foo(x int, y string) (bool, error) {
+	return false, nil
+}
+`
+			path := writeGoFile(t, src)
+			symbols, err := ExtractSymbolsFull(path)
+			if err != nil {
+				t.Fatalf("ExtractSymbolsFull() error: %v", err)
+			}
+			if len(symbols) != 1 {
+				t.Fatalf("expected 1 symbol, got %d: %v", len(symbols), symbols)
+			}
+			want := "func Foo(x int, y string) (bool, error)"
+			if symbols[0].Signature != want {
+				t.Errorf("Signature=%q, want %q", symbols[0].Signature, want)
+			}
+		})
+
+		t.Run("method", func(t *testing.T) {
+			src := `package foo
+
+type Server struct{}
+
+func (s *Server) Handle(n int) bool {
+	return true
+}
+`
+			path := writeGoFile(t, src)
+			symbols, err := ExtractSymbolsFull(path)
+			if err != nil {
+				t.Fatalf("ExtractSymbolsFull() error: %v", err)
+			}
+			var handleSym *Symbol
+			for i := range symbols {
+				if symbols[i].Name == "Handle" {
+					handleSym = &symbols[i]
+				}
+			}
+			if handleSym == nil {
+				t.Fatal("symbol Handle not found")
+			}
+			want := "func Handle(n int) bool"
+			if handleSym.Signature != want {
+				t.Errorf("Signature=%q, want %q", handleSym.Signature, want)
+			}
+			if handleSym.Receiver != "Server" {
+				t.Errorf("Receiver=%q, want %q", handleSym.Receiver, "Server")
+			}
+		})
+
+		t.Run("struct", func(t *testing.T) {
+			src := `package foo
+
+type Config struct {
+	Name string
+	Age  int
+}
+`
+			path := writeGoFile(t, src)
+			symbols, err := ExtractSymbolsFull(path)
+			if err != nil {
+				t.Fatalf("ExtractSymbolsFull() error: %v", err)
+			}
+			if len(symbols) != 1 {
+				t.Fatalf("expected 1 symbol, got %d: %v", len(symbols), symbols)
+			}
+			want := "Name string; Age int"
+			if symbols[0].Signature != want {
+				t.Errorf("Signature=%q, want %q", symbols[0].Signature, want)
+			}
+		})
+
+		t.Run("interface", func(t *testing.T) {
+			src := `package foo
+
+type Doer interface {
+	Do() error
+}
+`
+			path := writeGoFile(t, src)
+			symbols, err := ExtractSymbolsFull(path)
+			if err != nil {
+				t.Fatalf("ExtractSymbolsFull() error: %v", err)
+			}
+			if len(symbols) != 1 {
+				t.Fatalf("expected 1 symbol, got %d: %v", len(symbols), symbols)
+			}
+			if symbols[0].Signature == "" {
+				t.Error("interface Signature is empty, want non-empty")
+			}
+			// should contain the method signature
+			if !strings.Contains(symbols[0].Signature, "Do") {
+				t.Errorf("interface Signature=%q, expected to contain 'Do'", symbols[0].Signature)
+			}
+		})
+	})
+
+	t.Run("lines", func(t *testing.T) {
+		t.Run("one-liner func at line 3", func(t *testing.T) {
+			src := "package foo\n\nfunc Foo() {}\n"
+			path := writeGoFile(t, src)
+			symbols, err := ExtractSymbolsFull(path)
+			if err != nil {
+				t.Fatalf("ExtractSymbolsFull() error: %v", err)
+			}
+			if len(symbols) != 1 {
+				t.Fatalf("expected 1 symbol, got %d", len(symbols))
+			}
+			if symbols[0].Start != 3 {
+				t.Errorf("Start=%d, want 3", symbols[0].Start)
+			}
+			if symbols[0].End != 3 {
+				t.Errorf("End=%d, want 3", symbols[0].End)
+			}
+		})
+
+		t.Run("multi-line func End > Start", func(t *testing.T) {
+			src := "package foo\n\nfunc BigFunc() {\n\tx := 1\n\t_ = x\n}\n"
+			path := writeGoFile(t, src)
+			symbols, err := ExtractSymbolsFull(path)
+			if err != nil {
+				t.Fatalf("ExtractSymbolsFull() error: %v", err)
+			}
+			if len(symbols) != 1 {
+				t.Fatalf("expected 1 symbol, got %d", len(symbols))
+			}
+			if symbols[0].End <= symbols[0].Start {
+				t.Errorf("multi-line func: End=%d should be > Start=%d", symbols[0].End, symbols[0].Start)
+			}
+		})
+	})
+
+	t.Run("imports", func(t *testing.T) {
+		t.Run("file with imports - every symbol carries all import paths", func(t *testing.T) {
+			src := `package foo
+
+import (
+	"fmt"
+	"os"
+)
+
+func Foo() string {
+	_ = fmt.Sprintf
+	_ = os.Stderr
+	return ""
+}
+`
+			path := writeGoFile(t, src)
+			symbols, err := ExtractSymbolsFull(path)
+			if err != nil {
+				t.Fatalf("ExtractSymbolsFull() error: %v", err)
+			}
+			if len(symbols) != 1 {
+				t.Fatalf("expected 1 symbol, got %d", len(symbols))
+			}
+			imports := symbols[0].Imports
+			if len(imports) != 2 {
+				t.Errorf("Imports=%v, want [fmt os]", imports)
+			}
+			importSet := make(map[string]bool)
+			for _, imp := range imports {
+				importSet[imp] = true
+			}
+			for _, want := range []string{"fmt", "os"} {
+				if !importSet[want] {
+					t.Errorf("Imports missing %q, got %v", want, imports)
+				}
+			}
+		})
+
+		t.Run("file with no imports - symbol has nil or empty Imports", func(t *testing.T) {
+			src := "package foo\n\nfunc Foo() {}\n"
+			path := writeGoFile(t, src)
+			symbols, err := ExtractSymbolsFull(path)
+			if err != nil {
+				t.Fatalf("ExtractSymbolsFull() error: %v", err)
+			}
+			if len(symbols) != 1 {
+				t.Fatalf("expected 1 symbol, got %d", len(symbols))
+			}
+			if len(symbols[0].Imports) != 0 {
+				t.Errorf("expected empty Imports, got %v", symbols[0].Imports)
+			}
+		})
+	})
+
+	t.Run("stable_id", func(t *testing.T) {
+		src := `package foo
+
+type Server struct{}
+
+func Foo() {}
+func (s *Server) Handle() {}
+type Config struct{ Name string }
+`
+		path := writeGoFile(t, src)
+		symbols, err := ExtractSymbolsFull(path)
+		if err != nil {
+			t.Fatalf("ExtractSymbolsFull() error: %v", err)
+		}
+		idMap := make(map[string]string)
+		for _, sym := range symbols {
+			idMap[sym.Name] = sym.StableID
+		}
+		cases := []struct {
+			name string
+			want string
+		}{
+			{"Foo", "foo.Foo"},
+			{"Config", "foo.Config"},
+			{"Handle", "foo.Server.Handle"},
+		}
+		for _, tc := range cases {
+			got, ok := idMap[tc.name]
+			if !ok {
+				t.Errorf("symbol %q not found in results", tc.name)
+				continue
+			}
+			if got != tc.want {
+				t.Errorf("symbol %q: StableID=%q, want %q", tc.name, got, tc.want)
+			}
 		}
 	})
 }
