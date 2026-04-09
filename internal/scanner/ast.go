@@ -274,12 +274,98 @@ func buildMethodSigFromFuncType(name string, ft *ast.FuncType, fset *token.FileS
 	return sb.String()
 }
 
+// extractCallEdges walks the function body and returns a deduplicated list of
+// call targets. Import-qualified calls (e.g. fmt.Println) are resolved to
+// "<pkgname>.<symbol>" using importAliasMap. Unresolved selector calls and
+// direct calls are stored as-is. Returns nil if body is nil.
+func extractCallEdges(body *ast.BlockStmt, importAliasMap map[string]string) []string {
+	if body == nil {
+		return nil
+	}
+	var edges []string
+	seen := make(map[string]bool)
+	ast.Inspect(body, func(n ast.Node) bool {
+		call, ok := n.(*ast.CallExpr)
+		if !ok {
+			return true
+		}
+		var target string
+		switch fun := call.Fun.(type) {
+		case *ast.Ident:
+			// direct call: foo()
+			target = fun.Name
+		case *ast.SelectorExpr:
+			// selector call: pkg.Func() or obj.Method()
+			if ident, ok := fun.X.(*ast.Ident); ok {
+				if fullPkg, found := importAliasMap[ident.Name]; found {
+					// Resolve to <pkgname>.<symbol> where pkgname = last segment of import path
+					pkgName := fullPkg[strings.LastIndex(fullPkg, "/")+1:]
+					target = pkgName + "." + fun.Sel.Name
+				} else {
+					// obj.Method — not a known import alias; store raw
+					target = ident.Name + "." + fun.Sel.Name
+				}
+			}
+		}
+		if target != "" && !seen[target] {
+			seen[target] = true
+			edges = append(edges, target)
+		}
+		return true
+	})
+	return edges
+}
+
+// extractTypeRefs walks the function body and returns a deduplicated list of
+// exported type references. Collects:
+//   - ast.SelectorExpr where X.Name is a known import alias: "<pkgname>.<Type>"
+//   - ast.Ident where Name is in knownTypes (exported type names from same file)
+//
+// Primitives (int, string, bool, etc.) are excluded because they are not exported
+// (not capitalized) or not in knownTypes. Returns nil if body is nil.
+func extractTypeRefs(body *ast.BlockStmt, importAliasMap map[string]string, knownTypes map[string]bool) []string {
+	if body == nil {
+		return nil
+	}
+	var refs []string
+	seen := make(map[string]bool)
+	ast.Inspect(body, func(n ast.Node) bool {
+		switch node := n.(type) {
+		case *ast.SelectorExpr:
+			// Cross-package type reference: pkg.Type
+			if ident, ok := node.X.(*ast.Ident); ok {
+				if fullPkg, found := importAliasMap[ident.Name]; found {
+					pkgName := fullPkg[strings.LastIndex(fullPkg, "/")+1:]
+					// Only collect if the selector looks like a type (exported = capitalized)
+					if ast.IsExported(node.Sel.Name) {
+						ref := pkgName + "." + node.Sel.Name
+						if !seen[ref] {
+							seen[ref] = true
+							refs = append(refs, ref)
+						}
+					}
+				}
+			}
+			// Return false to avoid descending into the SelectorExpr's children
+			// independently (we already handled it at this level).
+			return false
+		case *ast.Ident:
+			// File-local exported type reference
+			if knownTypes[node.Name] && !seen[node.Name] {
+				seen[node.Name] = true
+				refs = append(refs, node.Name)
+			}
+		}
+		return true
+	})
+	return refs
+}
+
 // ExtractSymbolsFull parses the Go source file at path and returns a rich
 // Symbol profile for every exported symbol. Unexported symbols and methods
 // on unexported receiver types are excluded (per D-09, D-10).
 //
-// CallEdges and TypeRefs are nil in this plan; they are populated by the
-// body-walking pass added in Plan 02.
+// CallEdges and TypeRefs are populated by walking exported function bodies.
 //
 // ExtractSymbols, ExtractSymbolMap, and their callers are not modified.
 func ExtractSymbolsFull(path string) ([]Symbol, error) {
@@ -293,6 +379,24 @@ func ExtractSymbolsFull(path string) ([]Symbol, error) {
 	imports := extractImportPaths(f) // file-level, shared across all symbols
 	if len(imports) == 0 {
 		imports = nil
+	}
+
+	importAliasMap := buildImportAliasMap(f)
+
+	// Pre-pass: collect exported type names declared in this file for TypeRefs matching
+	knownTypes := make(map[string]bool)
+	for _, decl := range f.Decls {
+		gd, ok := decl.(*ast.GenDecl)
+		if !ok {
+			continue
+		}
+		for _, spec := range gd.Specs {
+			ts, ok := spec.(*ast.TypeSpec)
+			if !ok || !ts.Name.IsExported() {
+				continue
+			}
+			knownTypes[ts.Name.Name] = true
+		}
 	}
 
 	var symbols []Symbol
@@ -322,7 +426,7 @@ func ExtractSymbolsFull(path string) ([]Symbol, error) {
 				stableID = pkg + "." + recv + "." + d.Name.Name
 			}
 
-			symbols = append(symbols, Symbol{
+			sym := Symbol{
 				Name:      d.Name.Name,
 				Kind:      kind,
 				Signature: sig,
@@ -331,7 +435,10 @@ func ExtractSymbolsFull(path string) ([]Symbol, error) {
 				Receiver:  recv,
 				StableID:  stableID,
 				Imports:   imports,
-			})
+			}
+			sym.CallEdges = extractCallEdges(d.Body, importAliasMap)
+			sym.TypeRefs = extractTypeRefs(d.Body, importAliasMap, knownTypes)
+			symbols = append(symbols, sym)
 
 		case *ast.GenDecl:
 			for _, spec := range d.Specs {
