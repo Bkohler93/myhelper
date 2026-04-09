@@ -3,6 +3,7 @@ package scanner
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -38,7 +39,7 @@ func TestWalk(t *testing.T) {
 			t.Fatalf("Walk() error: %v", err)
 		}
 		for _, p := range paths {
-			if filepath.HasPrefix(p, ".git") {
+			if p == ".git" || strings.HasPrefix(p, ".git"+string(filepath.Separator)) {
 				t.Errorf("expected no .git paths, got %q", p)
 			}
 		}
@@ -58,7 +59,7 @@ func TestWalk(t *testing.T) {
 			t.Fatalf("Walk() error: %v", err)
 		}
 		for _, p := range paths {
-			if filepath.HasPrefix(p, "vendor") {
+			if p == "vendor" || strings.HasPrefix(p, "vendor"+string(filepath.Separator)) {
 				t.Errorf("expected no vendor paths, got %q", p)
 			}
 		}
@@ -78,7 +79,7 @@ func TestWalk(t *testing.T) {
 			t.Fatalf("Walk() error: %v", err)
 		}
 		for _, p := range paths {
-			if filepath.HasPrefix(p, "testdata") {
+			if p == "testdata" || strings.HasPrefix(p, "testdata"+string(filepath.Separator)) {
 				t.Errorf("expected no testdata paths, got %q", p)
 			}
 		}
@@ -98,7 +99,7 @@ func TestWalk(t *testing.T) {
 			t.Fatalf("Walk() error: %v", err)
 		}
 		for _, p := range paths {
-			if filepath.HasPrefix(p, ".myhelper") {
+			if p == ".myhelper" || strings.HasPrefix(p, ".myhelper"+string(filepath.Separator)) {
 				t.Errorf("expected no .myhelper paths, got %q", p)
 			}
 		}

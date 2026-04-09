@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/bkohler93/myhelper/internal/config"
@@ -141,7 +142,7 @@ func TestScan_GitDirExcluded(t *testing.T) {
 	entries := readIndexEntries(t, root)
 
 	for _, e := range entries {
-		if filepath.HasPrefix(e.Path, ".git") || (len(e.Path) > 4 && e.Path[:4] == ".git") {
+		if e.Path == ".git" || strings.HasPrefix(e.Path, ".git"+string(filepath.Separator)) {
 			t.Errorf("entry with path %q is under .git/ and should be excluded", e.Path)
 		}
 	}
