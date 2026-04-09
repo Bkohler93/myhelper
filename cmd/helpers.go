@@ -490,9 +490,13 @@ func buildInjectedMessages(root, query string, cfg config.Config, chatFn scanner
 	}
 
 	var validPaths []string
-	for _, candidate := range strings.Split(response, ",") {
-		p := strings.TrimSpace(candidate)
+	for candidate := range strings.SplitSeq(response, ",") {
+		p := filepath.Clean(strings.TrimSpace(candidate))
 		if p == "" {
+			continue
+		}
+		// Reject absolute paths and any path that escapes the project root.
+		if filepath.IsAbs(p) || strings.HasPrefix(p, "..") {
 			continue
 		}
 		if _, statErr := os.Stat(filepath.Join(root, p)); statErr == nil {
