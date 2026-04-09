@@ -148,8 +148,6 @@ func TestBuildIndex_BudgetCapDropsEntries(t *testing.T) {
 	// Write enough files that their total tokens will exceed a threshold of 100 (budget = 80).
 	// Each file has a unique exported function to ensure non-trivial symbol content.
 	for i := 0; i < 20; i++ {
-		fname := filepath.Join("src", filepath.Join("pkg", filepath.Join("sub", filepath.Join("deep"))))
-		_ = fname
 		name := 'A' + rune(i)
 		content := "package mypkg\n\nfunc Exported" + string(name) + "(x int, y string, z float64) (string, error) { return \"\", nil }\n"
 		writeGoFile(t, root, "file"+string(name)+".go", content)
