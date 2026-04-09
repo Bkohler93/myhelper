@@ -45,7 +45,7 @@ func runSync(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("read last_sync: %w", err)
 	}
 
-	return RunWithSpinner(func(progress func(string)) error {
+	return RunWithSpinner(func(progress updateLabelFn) error {
 		// Step 1: Find changed .go files since last sync.
 		progress("Detecting changed files...")
 		changed, err := changedFilesSince(root, since)
@@ -62,7 +62,7 @@ func runSync(cmd *cobra.Command, args []string) error {
 
 			// Step 3: Regenerate summaries for packages containing changed files.
 			progress("Re-summarizing changed packages...")
-			if err := deltaSummaries(root, cfg, ollama.Chat, changed); err != nil {
+			if err := deltaSummaries(root, cfg, ollama.Chat, changed, progress); err != nil {
 				return fmt.Errorf("delta summaries: %w", err)
 			}
 		}
@@ -211,7 +211,7 @@ func deltaIndex(root string, cfg config.Config, changedPaths []string) error {
 // deltaSummaries identifies which packages are affected by changedPaths, then
 // calls scanner.GenerateSummaries with only those packages' FileEntry objects.
 // Reads the merged index.json to get the current FileEntry list.
-func deltaSummaries(root string, cfg config.Config, chatFn scanner.ChatFn, changedPaths []string) error {
+func deltaSummaries(root string, cfg config.Config, chatFn scanner.ChatFn, changedPaths []string, progressFn func(string)) error {
 	// Build set of affected packages from changed paths.
 	changedSet := make(map[string]bool, len(changedPaths))
 	for _, p := range changedPaths {
@@ -249,5 +249,5 @@ func deltaSummaries(root string, cfg config.Config, chatFn scanner.ChatFn, chang
 		return nil
 	}
 
-	return scanner.GenerateSummaries(root, affected, cfg, chatFn)
+	return scanner.GenerateSummaries(root, affected, cfg, chatFn, progressFn)
 }

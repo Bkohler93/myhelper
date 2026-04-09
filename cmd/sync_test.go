@@ -3,6 +3,7 @@ package cmd
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -534,7 +535,7 @@ func TestDeltaSummaries(t *testing.T) {
 			return "summary for mypkg", nil
 		}
 
-		if err := deltaSummaries(root, defaultCfg, chatFn, []string{"mypkg/foo.go"}); err != nil {
+		if err := deltaSummaries(root, defaultCfg, chatFn, []string{"mypkg/foo.go"}, func(s string) {}); err != nil {
 			t.Fatalf("deltaSummaries: %v", err)
 		}
 		if !chatCalled {
@@ -559,7 +560,7 @@ func TestDeltaSummaries(t *testing.T) {
 			return "should not be called", nil
 		}
 
-		if err := deltaSummaries(root, defaultCfg, chatFn, []string{}); err != nil {
+		if err := deltaSummaries(root, defaultCfg, chatFn, []string{}, func(s string) {}); err != nil {
 			t.Fatalf("deltaSummaries: %v", err)
 		}
 		if chatCalled {
@@ -584,14 +585,15 @@ func TestDeltaSummaries(t *testing.T) {
 
 		var recordedPkg string
 		var stubFn scanner.ChatFn = func(cfg config.Config, msgs []history.Message) (string, error) {
+			fmt.Println("messages are", msgs)
 			// GenerateSummaries passes a user message with "Package: <name>"
-			if len(msgs) > 0 && strings.Contains(msgs[0].Content, "Package: util") {
+			if len(msgs) > 0 && strings.Contains(msgs[0].Content, "PACKAGE: util") {
 				recordedPkg = "util"
 			}
 			return "util summary", nil
 		}
 
-		if err := deltaSummaries(root, defaultCfg, stubFn, []string{"util/helper.go"}); err != nil {
+		if err := deltaSummaries(root, defaultCfg, stubFn, []string{"util/helper.go"}, func(s string) {}); err != nil {
 			t.Fatalf("deltaSummaries: %v", err)
 		}
 		if recordedPkg != "util" {

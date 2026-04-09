@@ -59,7 +59,7 @@ func TestScan_IndexJSONCreated(t *testing.T) {
 	root, fakeFn, _ := setupTempProject(t)
 	cfg := config.Config{TokenThreshold: 4100}
 
-	if err := scanner.Scan(root, cfg, fakeFn); err != nil {
+	if err := scanner.Scan(root, cfg, fakeFn, func(s string) {}); err != nil {
 		t.Fatalf("Scan() error: %v", err)
 	}
 
@@ -74,7 +74,7 @@ func TestScan_SummaryCreated(t *testing.T) {
 	root, fakeFn, _ := setupTempProject(t)
 	cfg := config.Config{TokenThreshold: 4100}
 
-	if err := scanner.Scan(root, cfg, fakeFn); err != nil {
+	if err := scanner.Scan(root, cfg, fakeFn, func(s string) {}); err != nil {
 		t.Fatalf("Scan() error: %v", err)
 	}
 
@@ -94,7 +94,7 @@ func TestScan_EntryFieldsPopulated(t *testing.T) {
 	root, fakeFn, _ := setupTempProject(t)
 	cfg := config.Config{TokenThreshold: 4100}
 
-	if err := scanner.Scan(root, cfg, fakeFn); err != nil {
+	if err := scanner.Scan(root, cfg, fakeFn, func(s string) {}); err != nil {
 		t.Fatalf("Scan() error: %v", err)
 	}
 
@@ -135,7 +135,7 @@ func TestScan_GitDirExcluded(t *testing.T) {
 	}
 
 	cfg := config.Config{TokenThreshold: 4100}
-	if err := scanner.Scan(root, cfg, fakeFn); err != nil {
+	if err := scanner.Scan(root, cfg, fakeFn, func(s string) {}); err != nil {
 		t.Fatalf("Scan() error: %v", err)
 	}
 
@@ -153,7 +153,7 @@ func TestScan_ChatFnCalled(t *testing.T) {
 	root, fakeFn, calls := setupTempProject(t)
 	cfg := config.Config{TokenThreshold: 4100}
 
-	if err := scanner.Scan(root, cfg, fakeFn); err != nil {
+	if err := scanner.Scan(root, cfg, fakeFn, func(s string) {}); err != nil {
 		t.Fatalf("Scan() error: %v", err)
 	}
 

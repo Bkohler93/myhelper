@@ -27,7 +27,7 @@ Constraints:
 //
 // ChatFn is injected as a parameter — no direct ollama.Chat call is made here.
 // In tests: pass a stub func. In production: pass ollama.Chat directly.
-func GenerateSummaries(root string, entries []FileEntry, cfg config.Config, chatFn ChatFn) error {
+func GenerateSummaries(root string, entries []FileEntry, cfg config.Config, chatFn ChatFn, generatingSummaryProgress func(string)) error {
 	if len(entries) == 0 {
 		return nil
 	}
@@ -49,6 +49,7 @@ func GenerateSummaries(root string, entries []FileEntry, cfg config.Config, chat
 		if strings.Contains(pkg, "_test") {
 			continue
 		}
+		generatingSummaryProgress(fmt.Sprintf("Generating Summary for %v", pkg))
 		// Collect all symbols from all files in the package.
 		var allSymbols []string
 		for _, e := range pkgEntries {

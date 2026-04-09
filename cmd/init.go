@@ -37,10 +37,10 @@ func runInit(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("mkdir .myhelper/summaries: %w", err)
 	}
 
-	return RunWithSpinner(func(progress func(string)) error {
+	return RunWithSpinner(func(progress updateLabelFn) error {
 		// Step 1: Full scan — BuildIndex + GenerateSummaries via scanner.Scan.
 		progress("Building index...")
-		if err := scanner.Scan(root, cfg, ollama.Chat); err != nil {
+		if err := scanner.Scan(root, cfg, ollama.Chat, progress); err != nil {
 			return fmt.Errorf("scan: %w", err)
 		}
 

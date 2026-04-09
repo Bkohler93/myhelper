@@ -52,10 +52,14 @@ func (m spinModel) View() string {
 	return m.spinner.View() + " " + m.label + "\n"
 }
 
+type updateLabelFn func(string)
+
+var NilUpdateLabelFn = updateLabelFn(func(s string) {})
+
 // RunWithSpinner runs workFn under an animated spinner displayed on stderr.
 // workFn receives a progress callback to update the spinner label.
 // Returns the error from workFn, if any.
-func RunWithSpinner(workFn func(progress func(label string)) error) error {
+func RunWithSpinner(workFn func(progress updateLabelFn) error) error {
 	s := spinner.New(spinner.WithSpinner(spinner.Dot))
 	m := spinModel{spinner: s, label: "Starting..."}
 	p := tea.NewProgram(m, tea.WithOutput(os.Stderr), tea.WithoutSignalHandler())

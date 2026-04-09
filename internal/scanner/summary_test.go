@@ -29,7 +29,7 @@ func TestGenerateSummaries_OneCallPerPackage_SinglePackage(t *testing.T) {
 		{Path: "c.go", Package: "foo", Symbols: []string{"func C()"}},
 	}
 
-	err := GenerateSummaries(root, entries, config.Config{}, fakeChatFn)
+	err := GenerateSummaries(root, entries, config.Config{}, fakeChatFn, func(s string) {})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -58,7 +58,7 @@ func TestGenerateSummaries_TwoCalls_TwoPackages(t *testing.T) {
 		{Path: "c.go", Package: "bar", Symbols: []string{"func C()"}},
 	}
 
-	err := GenerateSummaries(root, entries, config.Config{}, fakeChatFn)
+	err := GenerateSummaries(root, entries, config.Config{}, fakeChatFn, func(s string) {})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -80,7 +80,7 @@ func TestGenerateSummaries_OutputFileCreated(t *testing.T) {
 		{Path: "a.go", Package: "foo", Symbols: []string{"func A()"}},
 	}
 
-	err := GenerateSummaries(root, entries, config.Config{}, fakeChatFn)
+	err := GenerateSummaries(root, entries, config.Config{}, fakeChatFn, func(s string) {})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -104,7 +104,7 @@ func TestGenerateSummaries_OutputFileContent(t *testing.T) {
 		{Path: "a.go", Package: "foo", Symbols: []string{"func A()"}},
 	}
 
-	err := GenerateSummaries(root, entries, config.Config{}, fakeChatFn)
+	err := GenerateSummaries(root, entries, config.Config{}, fakeChatFn, func(s string) {})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -134,7 +134,7 @@ func TestGenerateSummaries_PromptContainsSymbols(t *testing.T) {
 		{Path: "a.go", Package: "foo", Symbols: []string{"func Bar(x int) string", "type Baz struct"}},
 	}
 
-	err := GenerateSummaries(root, entries, config.Config{}, fakeChatFn)
+	err := GenerateSummaries(root, entries, config.Config{}, fakeChatFn, func(s string) {})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -170,7 +170,7 @@ func TestGenerateSummaries_PromptIsUserRole(t *testing.T) {
 		{Path: "a.go", Package: "foo", Symbols: []string{"func A()"}},
 	}
 
-	err := GenerateSummaries(root, entries, config.Config{}, fakeChatFn)
+	err := GenerateSummaries(root, entries, config.Config{}, fakeChatFn, func(s string) {})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -196,7 +196,7 @@ func TestGenerateSummaries_EmptyEntries(t *testing.T) {
 
 	root := t.TempDir()
 
-	err := GenerateSummaries(root, []FileEntry{}, config.Config{}, fakeChatFn)
+	err := GenerateSummaries(root, []FileEntry{}, config.Config{}, fakeChatFn, func(s string) {})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -219,7 +219,7 @@ func TestGenerateSummaries_ChatFnError(t *testing.T) {
 		{Path: "a.go", Package: "foo", Symbols: []string{"func A()"}},
 	}
 
-	err := GenerateSummaries(root, entries, config.Config{}, fakeChatFn)
+	err := GenerateSummaries(root, entries, config.Config{}, fakeChatFn, func(string) {})
 	if err == nil {
 		t.Fatal("expected an error, got nil")
 	}
@@ -245,7 +245,7 @@ func TestGenerateSummaries_TestPackageSkipped(t *testing.T) {
 		{Path: "foo_test.go", Package: "foo_test", Symbols: []string{"func TestA(t *testing.T)"}},
 	}
 
-	err := GenerateSummaries(root, entries, config.Config{}, fakeChatFn)
+	err := GenerateSummaries(root, entries, config.Config{}, fakeChatFn, func(s string) {})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -284,7 +284,7 @@ func TestGenerateSummaries_PromptContainsFormatDirective(t *testing.T) {
 		{Path: "foo.go", Package: "foo", Symbols: []string{"func A()"}},
 	}
 
-	err := GenerateSummaries(root, entries, config.Config{}, fakeChatFn)
+	err := GenerateSummaries(root, entries, config.Config{}, fakeChatFn, func(s string) {})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
