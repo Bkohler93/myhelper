@@ -183,7 +183,11 @@ func deltaIndex(root string, cfg config.Config, changedPaths []string) error {
 			Symbols: symbols,
 		}
 		// Compute token count.
-		entryJSON, _ := json.Marshal(entry)
+		entryJSON, err := json.Marshal(entry)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "sync: marshal entry %s: %v\n", relPath, err)
+			continue
+		}
 		h := history.New(cfg.TokenThreshold, []history.Message{{Role: "user", Content: string(entryJSON)}})
 		entry.TokenCount = h.TokenCount()
 		byPath[relPath] = entry
