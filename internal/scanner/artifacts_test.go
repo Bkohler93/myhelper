@@ -101,8 +101,10 @@ func TestBuildArtifacts(t *testing.T) {
 		if artifact.SymbolCount <= 0 {
 			t.Errorf("SymbolCount = %d, want > 0", artifact.SymbolCount)
 		}
-		if artifact.Summary != "stub summary" {
-			t.Errorf("Summary = %q, want %q", artifact.Summary, "stub summary")
+		// No package summaries exist in the test project (no .myhelper/*.md files),
+		// so BuildArtifacts skips the LLM call and leaves Summary empty.
+		if artifact.Summary != "" {
+			t.Errorf("Summary = %q, want %q (empty — no package summaries to aggregate)", artifact.Summary, "")
 		}
 	})
 
