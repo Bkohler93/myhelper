@@ -59,7 +59,7 @@ func GenerateSummaries(root string, entries []FileEntry, cfg config.Config, chat
 		// Call ChatFn — return error immediately if it fails (no partial file).
 		content, err := chatFn(cfg, messages)
 		if err != nil {
-			return err
+			return fmt.Errorf("chatFn for package %q: %w", pkg, err)
 		}
 
 		// Write result to .myhelper/summaries/{pkg}.md.
