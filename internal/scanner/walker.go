@@ -36,9 +36,10 @@ func Walk(root string) ([]string, error) {
 		if err != nil {
 			return err
 		}
+		defer f.Close()
+
 		buf := make([]byte, 256)
 		n, err := f.Read(buf)
-		f.Close()
 		if err != nil && err != io.EOF {
 			return err
 		}
