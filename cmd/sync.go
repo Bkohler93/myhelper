@@ -139,7 +139,7 @@ func deltaIndex(root string, cfg config.Config, changedPaths []string) error {
 
 	// Build set of all current .go files (for deleted-file detection).
 	currentPaths := make(map[string]bool)
-	_ = filepath.WalkDir(root, func(path string, d os.DirEntry, walkErr error) error {
+	if err := filepath.WalkDir(root, func(path string, d os.DirEntry, walkErr error) error {
 		if walkErr != nil {
 			return walkErr
 		}
@@ -158,7 +158,9 @@ func deltaIndex(root string, cfg config.Config, changedPaths []string) error {
 			currentPaths[rel] = true
 		}
 		return nil
-	})
+	}); err != nil {
+		return fmt.Errorf("deltaIndex: walk for deleted-file detection: %w", err)
+	}
 
 	// Remove deleted entries.
 	for path := range byPath {
