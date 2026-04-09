@@ -13,6 +13,13 @@
 - `buildInjectedMessages` two-pass context injection helper with full token budget logic wired into all 4 query commands (plan, lookup, starter, pattern) (Phase 7)
 - `microPassFile` AST symbol-map + LLM line-range micro-pass for large files, replacing symbol-block fallback in `buildInjectedMessages` (Phase 8)
 
+### Known Gaps (accepted as tech debt)
+
+- **CTX-01, CTX-02, CTX-04** — Phase 07 missing VERIFICATION.md; requirements are functionally wired (integration-verified) but not formally verified
+- **SYNC-01, SYNC-02** — Phase 06 missing VERIFICATION.md; requirements are functionally wired (integration-verified) but not formally verified
+- **ApplyFlagOverrides** absent from all 4 query commands — `--token-limit` flag silently no-ops on plan/lookup/starter/pattern
+- **deltaIndex** re-uses stale `Index.Meta` — go.mod changes not reflected in index.json after sync until next `init`
+
 ---
 
 ## v1.1 Conversational Mode (Shipped: 2026-04-08)

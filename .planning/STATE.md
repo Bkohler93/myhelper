@@ -60,6 +60,8 @@ Key decisions are logged in PROJECT.md Key Decisions table.
 - `ApplyFlagOverrides` not called in query commands — `--token-limit` flag silently no-ops on plan/lookup/starter/pattern
 - Sync guard checks `meta.json` instead of `index.json` — overly strict on interrupted init
 - `generateContextMD` fails fast on empty summaries dir — aborts init/sync if no packages export symbols
+- `deltaIndex` re-uses `existing.Meta` without calling `ReadMeta` — go.mod changes not reflected in index.json until next `init`
+- Phases 06 and 07 missing VERIFICATION.md — CTX-01, CTX-02, CTX-04 formally unverified (accepted as tech debt at milestone completion)
 
 ### Blockers/Concerns
 
