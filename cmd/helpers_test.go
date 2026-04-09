@@ -606,6 +606,42 @@ func TestBuildInjectedMessages_NoSymbolBlock(t *testing.T) {
 	})
 }
 
+// TestReadIndexFile_StaleFlatIndex verifies that readIndexFile returns
+// scanner.ErrStaleFlatIndex when project.json exists, and os.ErrNotExist
+// when no artifact or index files are present.
+func TestReadIndexFile_StaleFlatIndex(t *testing.T) {
+	t.Run("returns_stale_error_when_project_json_exists", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		if err := os.MkdirAll(filepath.Join(tmpDir, ".myhelper"), 0755); err != nil {
+			t.Fatal(err)
+		}
+		// Write minimal project.json
+		if err := os.WriteFile(filepath.Join(tmpDir, ".myhelper", "project.json"),
+			[]byte(`{"schemaVersion":"1.0"}`), 0644); err != nil {
+			t.Fatal(err)
+		}
+		_, err := readIndexFile(tmpDir)
+		if err == nil {
+			t.Fatal("expected error, got nil")
+		}
+		if !errors.Is(err, scanner.ErrStaleFlatIndex) {
+			t.Fatalf("expected ErrStaleFlatIndex, got %v", err)
+		}
+	})
+
+	t.Run("returns_not_exist_when_no_files", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		// No .myhelper directory at all
+		_, err := readIndexFile(tmpDir)
+		if err == nil {
+			t.Fatal("expected error, got nil")
+		}
+		if errors.Is(err, scanner.ErrStaleFlatIndex) {
+			t.Fatalf("did not expect ErrStaleFlatIndex for missing index.json, got %v", err)
+		}
+	})
+}
+
 // TestRunConversationLoop_Summarization covers summarization behavior.
 func TestRunConversationLoop_Summarization(t *testing.T) {
 	t.Run("does not summarize when history is within limit", func(t *testing.T) {

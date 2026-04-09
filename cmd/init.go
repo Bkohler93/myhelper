@@ -44,6 +44,12 @@ func runInit(cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("scan: %w", err)
 		}
 
+		// Step 1b: Build hierarchical artifact files.
+		progress("Building artifact index...")
+		if err := scanner.BuildArtifacts(root, cfg, ollama.Chat); err != nil {
+			return fmt.Errorf("artifacts: %w", err)
+		}
+
 		// Step 2: Generate context.md from per-package summaries.
 		progress("Generating context.md...")
 		if err := generateContextMD(root, cfg, ollama.Chat); err != nil {

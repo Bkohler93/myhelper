@@ -67,6 +67,12 @@ func runSync(cmd *cobra.Command, args []string) error {
 			}
 		}
 
+		// Step 3b: Regenerate hierarchical artifact files.
+		progress("Updating artifact index...")
+		if err := scanner.BuildArtifacts(root, cfg, ollama.Chat); err != nil {
+			return fmt.Errorf("artifacts: %w", err)
+		}
+
 		// Step 4: Always regenerate context.md (per D-07).
 		progress("Generating context.md...")
 		if err := generateContextMD(root, cfg, ollama.Chat); err != nil {

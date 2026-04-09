@@ -307,7 +307,13 @@ const pass1PatternFocus = "Find multiple instances of a repeated logic pattern."
 
 // readIndexFile reads and unmarshals .myhelper/index.json from root.
 // Returns os.ErrNotExist-wrapped error if the file does not exist.
+// Returns scanner.ErrStaleFlatIndex if the new artifact files are present
+// (project.json exists), signaling callers to use artifact files instead.
 func readIndexFile(root string) (scanner.Index, error) {
+	// If new artifact files exist, the flat index.json is stale.
+	if _, statErr := os.Stat(filepath.Join(root, ".myhelper", "project.json")); statErr == nil {
+		return scanner.Index{}, scanner.ErrStaleFlatIndex
+	}
 	path := filepath.Join(root, ".myhelper", "index.json")
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -471,6 +477,9 @@ func buildInjectedMessages(root, query string, cfg config.Config, chatFn scanner
 		if os.IsNotExist(err) {
 			fmt.Fprint(os.Stderr, "No index found — run 'mh init' for context-aware answers.\n")
 			return []history.Message{{Role: "user", Content: query}}, nil
+		}
+		if errors.Is(err, scanner.ErrStaleFlatIndex) {
+			return injectSummaries(root, query)
 		}
 		return nil, fmt.Errorf("buildInjectedMessages: read index: %w", err)
 	}
