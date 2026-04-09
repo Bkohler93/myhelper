@@ -65,12 +65,12 @@ func runSync(cmd *cobra.Command, args []string) error {
 			if err := deltaSummaries(root, cfg, ollama.Chat, changed, progress); err != nil {
 				return fmt.Errorf("delta summaries: %w", err)
 			}
-		}
 
-		// Step 3b: Regenerate hierarchical artifact files.
-		progress("Updating artifact index...")
-		if err := scanner.BuildArtifacts(root, cfg, ollama.Chat); err != nil {
-			return fmt.Errorf("artifacts: %w", err)
+			// Step 3b: Rebuild artifact files only when something changed.
+			progress("Updating artifact index...")
+			if err := scanner.BuildArtifacts(root, cfg, ollama.Chat); err != nil {
+				return fmt.Errorf("artifacts: %w", err)
+			}
 		}
 
 		// Step 4: Always regenerate context.md (per D-07).
