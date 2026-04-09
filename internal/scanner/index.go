@@ -62,15 +62,15 @@ func BuildIndex(root string, cfg config.Config) ([]FileEntry, error) {
 	})
 
 	total := 0
-	cutoff := len(entries)
-	for i, e := range entries {
-		total += e.TokenCount
-		if total > budget {
-			cutoff = i
-			break
+	included := entries[:0:0] // reuse backing array, start empty
+	for _, e := range entries {
+		if total+e.TokenCount > budget {
+			continue // skip this file but try smaller subsequent ones
 		}
+		total += e.TokenCount
+		included = append(included, e)
 	}
-	entries = entries[:cutoff]
+	entries = included
 
 	// Serialize to JSON object and write to .myhelper/index.json.
 	// json.MarshalIndent on a nil slice produces "null"; use empty slice to get "[]".
