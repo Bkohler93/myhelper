@@ -45,7 +45,7 @@ Full archive: `.planning/milestones/v1.2-ROADMAP.md`
 
 **Milestone Goal:** Transform context handling from static injection into a structured, navigable representation of the codebase. The model retrieves incrementally (symbol → file → dependency expansion) rather than guessing context upfront.
 
-- [ ] **Phase 9: Extended AST & Symbol Extraction** — Enrich go/ast extraction with kind, signature, line range, imports, call edges, usage references, and stable identifiers
+- [x] **Phase 9: Extended AST & Symbol Extraction** — Enrich go/ast extraction with kind, signature, line range, imports, call edges, usage references, and stable identifiers (completed 2026-04-09)
 - [ ] **Phase 10: Hierarchical Index Artifacts** — Replace flat `index.json` with four layered artifact files: `project.json`, `packages.json`, `files.json`, `symbols.json`
 - [ ] **Phase 11: Retrieval Package** — New `internal/retrieval/` package with deterministic pre-filter, LLM re-ranking, relevance gate, and dependency-aware expansion
 - [ ] **Phase 12: Adaptive Context Builder & Strategies** — Staged context assembly replacing `buildInjectedMessages`, with per-command retrieval strategies
@@ -67,8 +67,8 @@ Full archive: `.planning/milestones/v1.2-ROADMAP.md`
 **Plans**: 2 plans
 
 Plans:
-- [ ] 09-01-PLAN.md — Symbol struct + ExtractSymbolsFull core (kind, signature, lines, imports, stableID)
-- [ ] 09-02-PLAN.md — Body walking: call edges (SYM-05) and type refs (SYM-06)
+- [x] 09-01-PLAN.md — Symbol struct + ExtractSymbolsFull core (kind, signature, lines, imports, stableID)
+- [x] 09-02-PLAN.md — Body walking: call edges (SYM-05) and type refs (SYM-06)
 
 ### Phase 10: Hierarchical Index Artifacts
 **Goal**: `init` and `sync` produce four structured artifact files (`project.json`, `packages.json`, `files.json`, `symbols.json`) with a schema version field, replacing the flat `index.json` as the canonical index
@@ -80,7 +80,11 @@ Plans:
   3. `packages.json` and `files.json` contain correct package/file metadata and import data
   4. `symbols.json` contains the full symbol profile (kind, signature, line range, file path, call edges, references) for every exported symbol
   5. Any consumer that loads the old flat `index.json` receives a typed `ErrStaleFlatIndex` error instead of silently yielding zero values
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 10-01-PLAN.md — Artifact struct types + BuildArtifacts (Symbol.FilePath, ProjectMeta.GoVersion, TDD)
+- [ ] 10-02-PLAN.md — Wire BuildArtifacts into init/sync; ErrStaleFlatIndex in readIndexFile
 
 ### Phase 11: Retrieval Package
 **Goal**: A standalone `internal/retrieval/` package provides the full retrieval pipeline — deterministic keyword/symbol pre-filter, LLM re-ranking, context relevance gate, and depth-1 dependency expansion — behind a single `BuildContext` entry point
@@ -129,8 +133,8 @@ Plans:
 | 6. init + sync Commands | v1.2 | 3/3 | Complete | 2026-04-08 |
 | 7. Two-Pass Context Injection | v1.2 | 2/2 | Complete | 2026-04-08 |
 | 8. Large File Micro-Pass | v1.2 | 2/2 | Complete | 2026-04-08 |
-| 9. Extended AST & Symbol Extraction | v1.3 | 0/2 | Not started | - |
-| 10. Hierarchical Index Artifacts | v1.3 | 0/? | Not started | - |
+| 9. Extended AST & Symbol Extraction | v1.3 | 2/2 | Complete   | 2026-04-09 |
+| 10. Hierarchical Index Artifacts | v1.3 | 0/2 | Not started | - |
 | 11. Retrieval Package | v1.3 | 0/? | Not started | - |
 | 12. Adaptive Context Builder & Strategies | v1.3 | 0/? | Not started | - |
 | 13. Commands & Flags | v1.3 | 0/? | Not started | - |
