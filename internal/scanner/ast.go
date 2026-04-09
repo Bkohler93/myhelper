@@ -436,6 +436,7 @@ func ExtractSymbolsFull(path string) ([]Symbol, error) {
 				Receiver:  recv,
 				StableID:  stableID,
 				Imports:   imports,
+				FilePath:  path,
 			}
 			sym.CallEdges = extractCallEdges(d.Body, importAliasMap)
 			sym.TypeRefs = extractTypeRefs(d.Body, importAliasMap, knownTypes)
@@ -469,6 +470,7 @@ func ExtractSymbolsFull(path string) ([]Symbol, error) {
 					End:       fset.Position(ts.End()).Line,
 					StableID:  pkg + "." + ts.Name.Name,
 					Imports:   imports,
+					FilePath:  path,
 				})
 			}
 		}
