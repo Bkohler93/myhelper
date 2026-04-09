@@ -68,6 +68,10 @@ func resolveInput(args []string, interactivePrompt string) (string, error) {
 
 var emptyHistoryErr = errors.New("cannot initiate conversation with empty history")
 
+// summaryPrefix is the prefix used to mark summary messages in the conversation history.
+// Used for re-condensation detection and summary message construction.
+const summaryPrefix = "Summary of previous conversation:"
+
 func initiateConversation(cfg config.Config, hist *history.History, streamFn func(config.Config, []history.Message) (string, error)) error {
 	if len(hist.Messages()) == 0 {
 		return emptyHistoryErr
@@ -187,7 +191,7 @@ func summarize(cfg config.Config, hist *history.History, summarizePrompt, recond
 	// Detect re-condensation: is there already a summary message in the slice?
 	prompt := summarizePrompt
 	for _, m := range msgs[1:] {
-		if m.Role == "system" && strings.HasPrefix(m.Content, "Summary of previous conversation:") {
+		if m.Role == "system" && strings.HasPrefix(m.Content, summaryPrefix) {
 			prompt = recondensePrompt
 			break
 		}
@@ -216,7 +220,7 @@ func summarize(cfg config.Config, hist *history.History, summarizePrompt, recond
 	newMessages = append(newMessages, msgs[0]) // original system message
 	newMessages = append(newMessages, history.Message{
 		Role:    "system",
-		Content: "Summary of previous conversation: " + summaryText,
+		Content: summaryPrefix + " " + summaryText,
 	})
 	newMessages = append(newMessages, finalPair...)
 	hist.Replace(newMessages)
