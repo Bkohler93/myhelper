@@ -15,10 +15,10 @@ type ConfigFile struct {
 
 // ProjectMeta holds project-level metadata extracted from go.mod, README, and config files.
 type ProjectMeta struct {
-	ModuleName    string
-	DirectDeps    []string
-	ReadmeContent string
-	ConfigFiles   []ConfigFile
+	ModuleName    string       `json:"module_name"`
+	DirectDeps    []string     `json:"direct_deps"`
+	ReadmeContent string       `json:"readme_content"`
+	ConfigFiles   []ConfigFile `json:"config_files"`
 }
 
 // ReadMeta reads project metadata from the given root directory.

@@ -2,20 +2,16 @@
 
 ## v1.2 Smart Context (Shipped: 2026-04-09)
 
-**Phases completed:** 4 phases, 13 plans, 6 tasks
+**Phases completed:** 4 phases, 13 plans, 13 tasks
 
 **Key accomplishments:**
 
-- One-liner:
-- One-liner:
-- One-liner:
-- One-liner:
-- Bubble Tea spinner (RunWithSpinner), context.md LLM generation (generateContextMD), and mtime timestamp helpers (readLastSync/writeLastSync) wired as shared foundations for init and sync commands
-- cmd/init.go runInit replaced: full scanner.Scan + generateContextMD + writeLastSync under Bubble Tea RunWithSpinner, removing blank-template logic entirely
-- cmd/sync.go delta sync: mtime-based file detection, index merge, selective package re-summarization, and context.md regeneration under RunWithSpinner
-- `readIndexFile(root string) (scanner.Index, error)`
-- One-liner:
-- 1. [Rule 1 - Bug] Fixed ExportedSymbols/UnexportedSymbols field references in existing tests
+- FileEntry/ChatFn type contracts, exclusion-aware Walk(), and go/ast-based ExtractSymbols() — scanner core primitives, 16 TDD-verified tests (Phase 5)
+- Token-budgeted index assembler serializes `{"meta": {...}, "files": [...]}` to `.myhelper/index.json` via ReadMeta + BuildIndex, dropping test files first when 80% budget is exceeded (Phase 5)
+- Per-package LLM summary generation and `scanner.Scan()` entry point completing the two-step scanner pipeline (Phase 5)
+- `init` and `sync` commands rewritten with Bubble Tea `RunWithSpinner`, `generateContextMD` LLM-based context.md generation, and mtime-based delta rescan (Phase 6)
+- `buildInjectedMessages` two-pass context injection helper with full token budget logic wired into all 4 query commands (plan, lookup, starter, pattern) (Phase 7)
+- `microPassFile` AST symbol-map + LLM line-range micro-pass for large files, replacing symbol-block fallback in `buildInjectedMessages` (Phase 8)
 
 ---
 
