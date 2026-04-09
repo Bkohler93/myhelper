@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Smart Context
-status: executing
-stopped_at: Completed 06-03-PLAN.md
-last_updated: "2026-04-08T17:02:47.448Z"
-last_activity: 2026-04-08
+status: complete
+stopped_at: Milestone v1.2 archived
+last_updated: "2026-04-09"
+last_activity: 2026-04-09
 progress:
   total_phases: 4
-  completed_phases: 2
-  total_plans: 9
-  completed_plans: 9
+  completed_phases: 4
+  total_plans: 13
+  completed_plans: 13
   percent: 100
 ---
 
@@ -18,68 +18,55 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-04-08 — v1.2 Smart Context started)
+See: .planning/PROJECT.md (updated 2026-04-08 after v1.2 Smart Context milestone)
 
-**Core value:** Get a useful, context-aware answer from the local model in one command, without context-bloat or round-trips to an external API.
-**Current focus:** Phase 06 — init-sync-commands
+**Core value:** Get a useful, project-aware answer from the local model in one command, without context-bloat or round-trips to an external API.
+**Current focus:** Planning next milestone (v1.3)
 
 ## Current Position
 
-Phase: 06 (init-sync-commands) — EXECUTING
-Plan: 2 of 3
-Status: Ready to execute
-Last activity: 2026-04-08
-
-Progress: [░░░░░░░░░░] 0% (0/? plans)
+Milestone: v1.2 Smart Context — COMPLETE
+All 4 phases (5-8), 13 plans shipped.
+Archive: `.planning/milestones/v1.2-ROADMAP.md`
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 11 (across v1.0 and v1.1)
-- Average duration: —
-- Total execution time: —
+- Total plans completed: 24 (across v1.0, v1.1, v1.2)
+- v1.2: 13 plans, 40 commits, 1 session (~12 hours)
 
 **By Phase:**
 
-| Phase | Plans | Total | Avg/Plan |
-|-------|-------|-------|----------|
-| v1.0 Phase 1 | 4 | — | — |
-| v1.1 Phase 2 | 3 | — | — |
-| v1.1 Phase 3 | 2 | — | — |
-| v1.1 Phase 4 | 2 | — | — |
-| Phase 06-init-sync-commands P03 | 10 | 1 tasks | 1 files |
+| Phase | Plans | Status |
+|-------|-------|--------|
+| v1.0 Phase 1 | 4 | Complete |
+| v1.1 Phase 2 | 3 | Complete |
+| v1.1 Phase 3 | 2 | Complete |
+| v1.1 Phase 4 | 2 | Complete |
+| v1.2 Phase 5 | 6 | Complete |
+| v1.2 Phase 6 | 3 | Complete |
+| v1.2 Phase 7 | 2 | Complete |
+| v1.2 Phase 8 | 2 | Complete |
 
 ## Accumulated Context
 
 ### Decisions
 
 Key decisions are logged in PROJECT.md Key Decisions table.
-Recent decisions affecting current work:
 
-- [Phase 04]: summarize() calls ollama.Chat directly (not streamFn) — non-streaming internal op
-- [Phase 04]: len(msgs) < 5 guard in summarize() — no content to compress on minimal history
-- [v1.2 constraint]: All new packages additive — runConversationLoop and initiateConversation must NOT be modified
-- [v1.2 constraint]: File content injected in user-role messages only (never system message)
-- [v1.2 constraint]: All LLM calls injectable via function parameters for testability
-- [v1.2 constraint]: Zero new go.mod dependencies — stdlib only for new capabilities
-- [v1.2 constraint]: 8k context window; 80% safety factor (TokenBudgetSafetyFactor = 0.80) applies everywhere
-- [Phase 06-init-sync-commands]: meta.json stat check placed before readLastSync — provides clear UX error distinguishing sync-before-init from parse errors
-- [Phase 06-init-sync-commands]: Token budget not re-applied during delta sync — prevents unexpected index entry eviction; changed entries replace at similar size
-- [Phase 06-init-sync-commands]: deltaSummaries re-summarizes all entries in affected packages (not just changed files) — keeps package summaries coherent
+### Known Tech Debt (v1.2)
 
-### Pending Todos
-
-None yet.
+- `ApplyFlagOverrides` not called in query commands — `--token-limit` flag silently no-ops on plan/lookup/starter/pattern
+- Sync guard checks `meta.json` instead of `index.json` — overly strict on interrupted init
+- `generateContextMD` fails fast on empty summaries dir — aborts init/sync if no packages export symbols
 
 ### Blockers/Concerns
 
-- Tokenizer mismatch: cl100k_base undercounts qwen2.5-coder:7b tokens — 20% safety factor is the mitigation; needs empirical validation during Phase 5
-- Pass-1 prompt wording: hallucination rate is model-specific; os.Stat validation is the safety net but prompt quality is an open question
-- 60-token-per-entry cap: derived arithmetically; whether summaries are rich enough for useful file selection needs testing in Phase 7
+None — milestone complete.
 
 ## Session Continuity
 
-Last session: 2026-04-08T17:02:47.445Z
-Stopped at: Completed 06-03-PLAN.md
-Resume file: None
+Last session: 2026-04-09
+Stopped at: Milestone v1.2 archived
+Resume: `/gsd-new-milestone` to start v1.3 planning

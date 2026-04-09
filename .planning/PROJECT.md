@@ -2,11 +2,11 @@
 
 ## What This Is
 
-A Go CLI tool for Go developers that offloads common coding micro-tasks to a locally-hosted LLM (Ollama + qwen2.5-coder:7b). Five focused subcommands — `init`, `plan`, `lookup`, `starter`, `pattern` — give context-aware answers scoped to the current project via `context.md`, with streaming output and no external API dependencies. All four query commands are interactive: after the first response, the user can ask follow-ups in a rolling conversation that automatically compresses history when the token threshold is hit. v1.1 shipped 2026-04-08.
+A Go CLI tool for Go developers that offloads common coding micro-tasks to a locally-hosted LLM (Ollama + qwen2.5-coder:7b). Five focused subcommands — `init`, `sync`, `plan`, `lookup`, `starter`, `pattern` — give project-aware answers by auto-scanning the codebase into a token-budgeted index and injecting only relevant file content into each query via two-pass retrieval. All four query commands are interactive: after the first response, the user can ask follow-ups in a rolling conversation that automatically compresses history when the token threshold is hit. No external API dependencies. v1.2 shipped 2026-04-08.
 
 ## Core Value
 
-Get a useful, context-aware answer from the local model in one command, without context-bloat or round-trips to an external API.
+Get a useful, project-aware answer from the local model in one command, without context-bloat or round-trips to an external API.
 
 ## Requirements
 
@@ -29,42 +29,34 @@ Get a useful, context-aware answer from the local model in one command, without 
 - ✓ Session exit on "quit" input or Ctrl+C (SIGINT handler scoped to loop lifetime) — v1.1
 - ✓ History summarization when token threshold reached — command-specific prompts — v1.1
 - ✓ Re-condensation: prior summary + new turns condensed together on subsequent threshold hits — v1.1
+- ✓ `init` auto-scans project and generates `.myhelper/context.md`, `.myhelper/index.json`, and per-package summaries — token-budgeted to fit `Config.TokenThreshold` — v1.2
+- ✓ `sync` command refreshes index/summaries when `.myhelper/` already exists (mtime-based delta rescan) — v1.2
+- ✓ Two-pass context injection in all 4 query commands: index → model selects files → inject content — v1.2
+- ✓ Large file handling: micro-pass using `go/ast` symbol map to request line range; truncate as safety net — v1.2
 
 ### Active
 
-- [ ] `init` auto-scans project and generates `.myhelper/context.md`, `.myhelper/index.json`, and per-module summaries — token-budgeted to fit `Config.TokenThreshold` — v1.2
-- [ ] `sync` command refreshes index/summaries when `.myhelper/` already exists — v1.2
-- [ ] Two-pass context injection in all 4 query commands: index → model selects files → inject content — v1.2
-- [ ] Large file handling: micro-pass using `go/ast` symbol map to request line range; truncate as safety net — v1.2
-- [ ] Nested sub-indexes for large projects when top-level index exceeds context budget — v1.2
-
-## Current Milestone: v1.2 Smart Context
-
-**Goal:** Replace the blank init template with auto-generated project intelligence — an index and summaries the model uses to surgically inject only relevant code into each prompt.
-
-**Target features:**
-- `init` auto-scans project, writes `.myhelper/context.md`, `.myhelper/index.json`, and per-module summaries, all token-budgeted to fit within `Config.TokenThreshold`
-- `sync` command refreshes index/summaries when `.myhelper/` already exists
-- Two-pass context injection in all 4 query commands: index → file selection → content injection
-- Large file handling: micro-pass using `go/ast` symbol map to request line range; truncate as safety net
-- Nested sub-indexes for large projects when the top-level index itself exceeds the context budget
+(None — planning next milestone)
 
 ### Out of Scope
 
-- Auto-detection of project metadata on init — pure template, user fills it — keeps init fast and predictable
+- Nested sub-indexes for large projects when flat `index.json` exceeds context budget — auto-triggered when flat index overflows (revisit v1.3 if needed)
 - Global/fallback context.md — per-directory only, avoids cross-project bleed
 - Web search or external API calls — local inference only
 - Non-Go output — tool is optimized for Go projects; other languages are incidental
 - Conversation history persistence across sessions — single-session only; stateless between invocations
+- Vector/embedding search — the two-pass LLM-as-retriever design makes this unnecessary and avoids infrastructure overhead
+- Gitignore library dependency — hardcoded skip list covers Go projects; avoids an unmaintained dependency
 
 ## Context
 
 - **Inference server**: Ollama at `192.168.0.9:11434`, model `qwen2.5-coder:7b`
-- **Model constraint**: ~8k context window — prompts must be short and factual; system prompt + context.md + user query must fit comfortably; token threshold at 4,100 triggers summarization before the window fills
-- **User workflow**: Developer runs the tool from within a Go project directory; `context.md` at the project root scopes the model's responses to that project's stack and patterns; multi-turn follow-ups work within the same invocation
+- **Model constraint**: ~8k context window — token threshold at 4,100 triggers summarization before the window fills; two-pass injection budget is 80% of threshold
+- **User workflow**: Developer runs the tool from within a Go project directory; `init` scans the project into `.myhelper/`; each query command does a two-pass retrieval (index → file selection → content injection); multi-turn follow-ups work within the same invocation
 - **Primary use case**: Solo developer productivity tool; no multi-user, auth, or network exposure concerns
-- **Codebase state**: ~735 LOC Go (source), ~7,351 lines including tests; cobra CLI framework, single binary output
-- **Tech stack**: Go, cobra, bufio scanner for NDJSON streaming, go-tiktoken (cl100k_base), config from file/env/defaults
+- **Codebase state**: ~2,147 LOC Go (source), ~2,331 LOC tests; Bubble Tea TUI for spinner feedback; go/ast for symbol extraction
+- **Tech stack**: Go, cobra, Bubble Tea, bufio scanner for NDJSON streaming, go-tiktoken (cl100k_base), go/ast, config from file/env/defaults
+- **Known tech debt**: `ApplyFlagOverrides` not called in query commands (--token-limit flag silently no-ops); sync guard checks `meta.json` instead of `index.json`; `generateContextMD` fails fast on empty summaries dir
 
 ## Constraints
 
@@ -78,7 +70,7 @@ Get a useful, context-aware answer from the local model in one command, without 
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| context.md is a pure template (no auto-detect) | Keeps init simple and fast; user knows their stack better than heuristics do | ✓ Good — init is instant and predictable |
+| context.md is a pure template (no auto-detect) | Keeps init simple and fast; user knows their stack better than heuristics do | ✓ Good — init is instant and predictable (v1.0) |
 | Per-directory context.md only | Avoids cross-project bleed; forces explicit initialization per project | ✓ Good — clear mental model |
 | Stream output as tokens arrive (bufio.Scanner over NDJSON) | Model is slow enough that streaming feels faster; matches developer expectation | ✓ Good — token-by-token via os.Stdout |
 | cobra for CLI framework | Standard Go CLI library; enables subcommands cleanly | ✓ Good |
@@ -98,6 +90,14 @@ Get a useful, context-aware answer from the local model in one command, without 
 | summarize() calls ollama.Chat directly (not streamFn) | Non-streaming internal op; injection not needed here | ✓ Good |
 | len(msgs) < 5 guard in summarize() | No content to compress when only system+user+assistant exist | ✓ Good |
 | Re-condensation detected via "Summary of previous conversation:" prefix | Simple, no extra state; same code path as first summarization | ✓ Good |
+| Two-pass LLM retrieval over vector/embedding search | No infrastructure overhead; model already understands the index format | ✓ Good — no extra deps (v1.2) |
+| go/ast for symbol extraction (stdlib) | Zero external deps; accurate for Go projects | ✓ Good (v1.2) |
+| Bubble Tea spinner for init/sync TUI | Smooth feedback during long scans; composable with Cobra | ✓ Good (v1.2) |
+| mtime-based delta rescan in sync | Simpler than hash tracking; accurate for single-machine dev workflow | ✓ Good (v1.2) |
+| Token budget at 80% of threshold per file | Leaves headroom for Pass-1 overhead and conversation history | ✓ Good (v1.2) |
+| microPassFile asks LLM for line range before truncation | Preserves relevant context even for oversized files | ✓ Good (v1.2) |
+| Sync guard checks meta.json not index.json | Overly strict on interrupted init — should check index.json | ⚠️ Revisit (tech debt, v1.2) |
+| generateContextMD fails fast on empty summaries | Aborts init/sync if no packages have exported symbols | ⚠️ Revisit (tech debt, v1.2) |
 
 ## Evolution
 
@@ -110,4 +110,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-08 — v1.2 Smart Context milestone started*
+*Last updated: 2026-04-08 after v1.2 Smart Context milestone*
