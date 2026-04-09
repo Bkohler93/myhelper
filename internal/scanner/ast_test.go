@@ -428,6 +428,119 @@ type Config struct{ Name string }
 			}
 		}
 	})
+
+	t.Run("call_edges", func(t *testing.T) {
+		src := `package foo
+
+import (
+	"fmt"
+	"os"
+)
+
+func Foo() {
+	fmt.Println("hello")
+	os.Exit(1)
+	helper()
+	helper() // duplicate — should appear once
+}
+
+func helper() {}
+`
+		path := writeGoFile(t, src)
+		syms, err := ExtractSymbolsFull(path)
+		if err != nil {
+			t.Fatalf("ExtractSymbolsFull() error: %v", err)
+		}
+		// Find Foo (exported)
+		var foo *Symbol
+		for i := range syms {
+			if syms[i].Name == "Foo" {
+				foo = &syms[i]
+				break
+			}
+		}
+		if foo == nil {
+			t.Fatal("expected symbol Foo, not found")
+		}
+		// Check resolved import call edges
+		edgeSet := make(map[string]bool)
+		for _, e := range foo.CallEdges {
+			edgeSet[e] = true
+		}
+		if !edgeSet["fmt.Println"] {
+			t.Errorf("expected CallEdge 'fmt.Println', got %v", foo.CallEdges)
+		}
+		if !edgeSet["os.Exit"] {
+			t.Errorf("expected CallEdge 'os.Exit', got %v", foo.CallEdges)
+		}
+		if !edgeSet["helper"] {
+			t.Errorf("expected CallEdge 'helper', got %v", foo.CallEdges)
+		}
+		// No duplicates
+		seen := make(map[string]int)
+		for _, e := range foo.CallEdges {
+			seen[e]++
+		}
+		for k, v := range seen {
+			if v > 1 {
+				t.Errorf("CallEdge %q appears %d times (want 1)", k, v)
+			}
+		}
+	})
+
+	t.Run("type_refs", func(t *testing.T) {
+		src := `package foo
+
+import "os"
+
+type Config struct{ Name string }
+
+func UseTypes() {
+	var _ Config
+	var _ *os.File
+	var _ int
+	var _ Config // duplicate — should appear once
+}
+`
+		path := writeGoFile(t, src)
+		syms, err := ExtractSymbolsFull(path)
+		if err != nil {
+			t.Fatalf("ExtractSymbolsFull() error: %v", err)
+		}
+		var fn *Symbol
+		for i := range syms {
+			if syms[i].Name == "UseTypes" {
+				fn = &syms[i]
+				break
+			}
+		}
+		if fn == nil {
+			t.Fatal("expected symbol UseTypes, not found")
+		}
+		refSet := make(map[string]bool)
+		for _, r := range fn.TypeRefs {
+			refSet[r] = true
+		}
+		if !refSet["Config"] {
+			t.Errorf("expected TypeRef 'Config', got %v", fn.TypeRefs)
+		}
+		if !refSet["os.File"] {
+			t.Errorf("expected TypeRef 'os.File', got %v", fn.TypeRefs)
+		}
+		if refSet["int"] {
+			t.Errorf("expected 'int' NOT in TypeRefs (primitive), got %v", fn.TypeRefs)
+		}
+		// No duplicates
+		seen := make(map[string]int)
+		for _, r := range fn.TypeRefs {
+			seen[r]++
+		}
+		for k, v := range seen {
+			if v > 1 {
+				t.Errorf("TypeRef %q appears %d times (want 1)", k, v)
+			}
+		}
+	})
 }
 
 func TestExtractSymbols(t *testing.T) {
