@@ -62,14 +62,14 @@ func runSync(cmd *cobra.Command, args []string) error {
 
 			// Step 3: Regenerate summaries for packages containing changed files.
 			progress("Re-summarizing changed packages...")
-			if err := deltaSummaries(root, cfg, scanner.ChatFn(ollama.Chat), changed); err != nil {
+			if err := deltaSummaries(root, cfg, ollama.Chat, changed); err != nil {
 				return fmt.Errorf("delta summaries: %w", err)
 			}
 		}
 
 		// Step 4: Always regenerate context.md (per D-07).
 		progress("Generating context.md...")
-		if err := generateContextMD(root, cfg, scanner.ChatFn(ollama.Chat)); err != nil {
+		if err := generateContextMD(root, cfg, ollama.Chat); err != nil {
 			return fmt.Errorf("context.md: %w", err)
 		}
 

@@ -46,7 +46,7 @@ func runInit(cmd *cobra.Command, args []string) error {
 
 		// Step 2: Generate context.md from per-package summaries.
 		progress("Generating context.md...")
-		if err := generateContextMD(root, cfg, scanner.ChatFn(ollama.Chat)); err != nil {
+		if err := generateContextMD(root, cfg, ollama.Chat); err != nil {
 			return fmt.Errorf("context.md: %w", err)
 		}
 
