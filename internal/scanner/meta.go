@@ -2,6 +2,7 @@ package scanner
 
 import (
 	"bufio"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -105,7 +106,9 @@ func ReadMeta(root string) (ProjectMeta, error) {
 		}
 		data, err := os.ReadFile(filepath.Join(root, entry.Name()))
 		if err != nil {
-			return meta, err
+			// Match the graceful handling used for go.mod and README.md.
+			fmt.Fprintf(os.Stderr, "ReadMeta: skip config file %s: %v\n", entry.Name(), err)
+			continue
 		}
 		meta.ConfigFiles = append(meta.ConfigFiles, ConfigFile{
 			Name:    entry.Name(),
