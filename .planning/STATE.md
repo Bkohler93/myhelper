@@ -1,14 +1,13 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.2
-milestone_name: Smart Context
-status: complete
-stopped_at: Milestone v1.2 archived
-last_updated: "2026-04-09"
-last_activity: 2026-04-09
+milestone: v1.3
+milestone_name: Structured Code Intelligence
+status: in_progress
+last_updated: "2026-04-10"
+last_activity: 2026-04-10
 progress:
-  total_phases: 4
-  completed_phases: 4
+  total_phases: 5
+  completed_phases: 5
   total_plans: 13
   completed_plans: 13
   percent: 100
@@ -18,23 +17,22 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-04-08 after v1.2 Smart Context milestone)
+See: .planning/PROJECT.md
 
 **Core value:** Get a useful, project-aware answer from the local model in one command, without context-bloat or round-trips to an external API.
-**Current focus:** Planning next milestone (v1.3)
+**Current focus:** v1.3 Structured Code Intelligence — Phase 13 complete
 
 ## Current Position
 
-Milestone: v1.2 Smart Context — COMPLETE
-All 4 phases (5-8), 13 plans shipped.
-Archive: `.planning/milestones/v1.2-ROADMAP.md`
+Milestone: v1.3 Structured Code Intelligence — In Progress
+Phases 9-13 complete (5/5). All 13 plans shipped.
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 24 (across v1.0, v1.1, v1.2)
-- v1.2: 13 plans, 40 commits, 1 session (~12 hours)
+- Total plans completed: 37 (across v1.0, v1.1, v1.2, v1.3)
+- v1.3: 13 plans across 5 phases
 
 **By Phase:**
 
@@ -48,6 +46,11 @@ Archive: `.planning/milestones/v1.2-ROADMAP.md`
 | v1.2 Phase 6 | 3 | Complete |
 | v1.2 Phase 7 | 2 | Complete |
 | v1.2 Phase 8 | 2 | Complete |
+| v1.3 Phase 9 | 2 | Complete |
+| v1.3 Phase 10 | 2 | Complete |
+| v1.3 Phase 11 | 1 | Complete |
+| v1.3 Phase 12 | 3 | Complete |
+| v1.3 Phase 13 | 3 | Complete |
 
 ## Accumulated Context
 
@@ -55,20 +58,21 @@ Archive: `.planning/milestones/v1.2-ROADMAP.md`
 
 Key decisions are logged in PROJECT.md Key Decisions table.
 
-### Known Tech Debt (v1.2)
+### Known Tech Debt (v1.3)
 
-- `ApplyFlagOverrides` not called in query commands — `--token-limit` flag silently no-ops on plan/lookup/starter/pattern
 - Sync guard checks `meta.json` instead of `index.json` — overly strict on interrupted init
 - `generateContextMD` fails fast on empty summaries dir — aborts init/sync if no packages export symbols
 - `deltaIndex` re-uses `existing.Meta` without calling `ReadMeta` — go.mod changes not reflected in index.json until next `init`
 - Phases 06 and 07 missing VERIFICATION.md — CTX-01, CTX-02, CTX-04 formally unverified (accepted as tech debt at milestone completion)
+- `inspect` command ignores `--no-context` flag (WR-04 from phase 13 code review)
+- `BuildContext`/`BuildInspectContext` silently discard `llmReRank` error return (WR-02)
 
 ### Blockers/Concerns
 
-None — milestone complete.
+None.
 
 ## Session Continuity
 
-Last session: 2026-04-09
-Stopped at: Milestone v1.2 archived
-Resume: `/gsd-new-milestone` to start v1.3 planning
+Last session: 2026-04-10
+Stopped at: Phase 13 complete — Commands & Flags
+Resume: `/gsd-complete-milestone` to archive v1.3 or `/gsd-new-milestone` to plan next
