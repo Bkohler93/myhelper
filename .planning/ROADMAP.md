@@ -47,7 +47,7 @@ Full archive: `.planning/milestones/v1.2-ROADMAP.md`
 
 - [x] **Phase 9: Extended AST & Symbol Extraction** — Enrich go/ast extraction with kind, signature, line range, imports, call edges, usage references, and stable identifiers (completed 2026-04-09)
 - [x] **Phase 10: Hierarchical Index Artifacts** — Replace flat `index.json` with four layered artifact files: `project.json`, `packages.json`, `files.json`, `symbols.json` (completed 2026-04-09)
-- [ ] **Phase 11: Retrieval Package** — New `internal/retrieval/` package with deterministic pre-filter, LLM re-ranking, relevance gate, and dependency-aware expansion
+- [x] **Phase 11: Retrieval Package** — New `internal/retrieval/` package with deterministic pre-filter, LLM re-ranking, relevance gate, and dependency-aware expansion (completed 2026-04-10)
 - [ ] **Phase 12: Adaptive Context Builder & Strategies** — Staged context assembly replacing `buildInjectedMessages`, with per-command retrieval strategies
 - [ ] **Phase 13: Commands & Flags** — `--no-context` flag, `inspect` command, and `ApplyFlagOverrides` fix
 
@@ -100,7 +100,7 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 11-01-PLAN.md — Full retrieval pipeline: package skeleton, all 4 stages (pre-filter, gate, re-ranking, expansion), BuildContext entry point, and test suite
+- [x] 11-01-PLAN.md — Full retrieval pipeline: package skeleton, all 4 stages (pre-filter, gate, re-ranking, expansion), BuildContext entry point, and test suite
 
 ### Phase 12: Adaptive Context Builder & Strategies
 **Goal**: The adaptive context builder assembles context in token-bounded stages (project summary → symbol matches → file selection → conditional expansion), replacing `buildInjectedMessages`, with per-command strategies that calibrate retrieval depth to task needs
@@ -112,7 +112,12 @@ Plans:
   3. `buildInjectedMessages` is deleted from `helpers.go`; all four query commands call `retrieval.BuildContext` instead
   4. Per-command strategies deliver correct context depth: `plan` summaries-only; `starter` symbols + minimal file context; `lookup` minimal or none; `pattern` zero or near-zero
   5. `starter` injects matched symbol signatures and expands to file content only when the token budget allows and context is required
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [ ] 12-01-PLAN.md — TDD: Write failing tests for stage-aware assembleMessages and Strategy variables (CTX-01, CTX-02, CTX-04)
+- [ ] 12-02-PLAN.md — Implement stage-aware assembleMessages, move microPassFile, define Strategy variables (CTX-01, CTX-02, CTX-04)
+- [ ] 12-03-PLAN.md — Rewire four commands to retrieval.BuildContext; delete buildInjectedMessages and dead helpers (CTX-03, CTX-04)
 
 ### Phase 13: Commands & Flags
 **Goal**: Users can bypass retrieval entirely with `--no-context`, debug retrieval decisions with `inspect`, and `--token-limit` correctly caps retrieval budget in all query commands
@@ -138,6 +143,6 @@ Plans:
 | 8. Large File Micro-Pass | v1.2 | 2/2 | Complete | 2026-04-08 |
 | 9. Extended AST & Symbol Extraction | v1.3 | 2/2 | Complete   | 2026-04-09 |
 | 10. Hierarchical Index Artifacts | v1.3 | 2/2 | Complete   | 2026-04-09 |
-| 11. Retrieval Package | v1.3 | 0/1 | Not started | - |
-| 12. Adaptive Context Builder & Strategies | v1.3 | 0/? | Not started | - |
+| 11. Retrieval Package | v1.3 | 1/1 | Complete   | 2026-04-10 |
+| 12. Adaptive Context Builder & Strategies | v1.3 | 0/3 | Not started | - |
 | 13. Commands & Flags | v1.3 | 0/? | Not started | - |
