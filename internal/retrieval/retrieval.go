@@ -709,3 +709,148 @@ func microPassFile(root, path, query string, cfg config.Config, chatFn scanner.C
 	// D-09: even a single line doesn't fit — skip this file.
 	return "", false
 }
+
+// -----------------------------------------------------------------------------
+// Inspect Pipeline (CMD-02)
+// -----------------------------------------------------------------------------
+
+// SelectionSource identifies which pipeline stage selected a symbol or file.
+type SelectionSource int
+
+const (
+	SourcePreFilter SelectionSource = iota // symbol passed keyword pre-filter
+	SourceReRank                           // symbol confirmed by LLM re-ranking
+	SourceExpansion                        // file added by dependency expansion
+)
+
+// String returns a human-readable label for a SelectionSource.
+func (s SelectionSource) String() string {
+	switch s {
+	case SourcePreFilter:
+		return "pre-filter"
+	case SourceReRank:
+		return "re-rank"
+	case SourceExpansion:
+		return "expansion"
+	default:
+		return "unknown"
+	}
+}
+
+// SymbolResult pairs a selected symbol with the stage that selected it.
+type SymbolResult struct {
+	Symbol scanner.Symbol
+	Source SelectionSource
+}
+
+// FileResult pairs a selected file path with the stage that selected it.
+type FileResult struct {
+	Path   string
+	Source SelectionSource
+}
+
+// StageMetrics records the token cost at a pipeline stage boundary.
+type StageMetrics struct {
+	Name       string
+	TokensUsed int
+}
+
+// InspectResult holds per-stage diagnostic output from a dry-run retrieval.
+// It does not contain assembled messages — BuildInspectContext never calls assembleMessages.
+type InspectResult struct {
+	Symbols      []SymbolResult
+	Files        []FileResult
+	StageMetrics []StageMetrics
+	FinalTokens  int
+	GatePassed   bool
+}
+
+// BuildInspectContext runs the retrieval pipeline in dry-run mode and returns
+// per-stage diagnostics. It does NOT call assembleMessages or make any streaming
+// calls beyond the relevance gate and re-ranking LLM calls.
+//
+// If artifacts do not exist, it returns InspectResult{GatePassed: false} with nil
+// error — same graceful fallback as BuildContext.
+// If the relevance gate returns false, it returns InspectResult{GatePassed: false}
+// with nil error and no stage metrics.
+func BuildInspectContext(
+	root string,
+	query string,
+	strategy Strategy,
+	cfg config.Config,
+	chatFn scanner.ChatFn,
+) (InspectResult, error) {
+	proj, pkgs, files, syms, err := loadArtifacts(root)
+	if err != nil {
+		// No artifacts — not an error; caller (inspect command) handles the display.
+		return InspectResult{GatePassed: false}, nil
+	}
+
+	var result InspectResult
+
+	// Stage 1: Relevance gate (RET-04)
+	result.GatePassed = needsContext(query, proj.Summary, cfg, chatFn)
+	if !result.GatePassed {
+		return result, nil
+	}
+
+	// Budget setup (mirrors BuildContext)
+	totalBudget := int(float64(cfg.TokenThreshold) * contextBudgetFactor)
+
+	// Stage 2: Pre-filter (RET-01, RET-02)
+	candidates := preFilter(query, syms.Symbols, files.Files)
+	candidates = applyTokenCap(candidates, totalBudget, cfg)
+	preFilterTokens := 0
+	for _, c := range candidates {
+		preFilterTokens += tokenCount(cfg, c.Signature)
+	}
+	result.StageMetrics = append(result.StageMetrics, StageMetrics{
+		Name:       "pre-filter",
+		TokensUsed: preFilterTokens,
+	})
+
+	// Stage 3: LLM re-ranking (RET-03)
+	// Only symbols that survive re-ranking appear in output (per A4 assumption in RESEARCH.md).
+	selected, _ := llmReRank(query, candidates, pkgs.Packages, cfg, chatFn)
+	reRankTokens := 0
+	for _, s := range selected {
+		reRankTokens += tokenCount(cfg, s.Signature)
+		result.Symbols = append(result.Symbols, SymbolResult{
+			Symbol: s,
+			Source: SourceReRank,
+		})
+	}
+	result.StageMetrics = append(result.StageMetrics, StageMetrics{
+		Name:       "re-rank",
+		TokensUsed: reRankTokens,
+	})
+
+	// Stage 4: Dependency expansion (RET-05)
+	// Track which paths come from re-ranking vs expansion (Pitfall 4 from RESEARCH.md).
+	selectedPaths := uniqueFilePaths(selected)
+	selectedSet := make(map[string]bool, len(selectedPaths))
+	for _, p := range selectedPaths {
+		selectedSet[p] = true
+		result.Files = append(result.Files, FileResult{Path: p, Source: SourceReRank})
+	}
+
+	usedTokens := reRankTokens
+	expansionBudget := int(float64(totalBudget-usedTokens) * expansionBudgetFactor)
+	expandedPaths := expandDeps(selectedPaths, files, expansionBudget, cfg)
+
+	expansionTokens := 0
+	for _, p := range expandedPaths {
+		if !selectedSet[p] {
+			cost := tokenCount(cfg, p)
+			expansionTokens += cost
+			result.Files = append(result.Files, FileResult{Path: p, Source: SourceExpansion})
+		}
+	}
+	result.StageMetrics = append(result.StageMetrics, StageMetrics{
+		Name:       "expansion",
+		TokensUsed: expansionTokens,
+	})
+
+	result.FinalTokens = reRankTokens + expansionTokens
+	return result, nil
+}
