@@ -43,14 +43,22 @@ func runStarter(cmd *cobra.Command, args []string) error {
 	}
 
 	cfg := config.Load()
+	ApplyFlagOverrides(&cfg)
 
 	root, err := os.Getwd()
 	if err != nil {
 		return fmt.Errorf("runStarter: getwd: %w", err)
 	}
-	rctx, err := retrieval.BuildContext(root, input, retrieval.StarterStrategy, cfg, ollama.Chat)
-	if err != nil {
-		return fmt.Errorf("runStarter: BuildContext: %w", err)
+	var rctx retrieval.Context
+	if noContextFlag {
+		rctx = retrieval.Context{
+			Messages: []history.Message{{Role: "user", Content: input}},
+		}
+	} else {
+		rctx, err = retrieval.BuildContext(root, input, retrieval.StarterStrategy, cfg, ollama.Chat)
+		if err != nil {
+			return fmt.Errorf("runStarter: BuildContext: %w", err)
+		}
 	}
 
 	messages := []history.Message{
