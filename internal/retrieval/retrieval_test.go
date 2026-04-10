@@ -485,3 +485,149 @@ func TestStrategy_Pattern(t *testing.T) {
 		t.Errorf("PatternStrategy.MaxTokenRatio: want 0.10 got %v", PatternStrategy.MaxTokenRatio)
 	}
 }
+
+// ---------------------------------------------------------------------------
+// writeArtifacts — test helper for BuildInspectContext tests
+// ---------------------------------------------------------------------------
+
+// writeArtifacts writes minimal four-artifact files to root/.myhelper/ for tests.
+func writeArtifacts(t *testing.T, root string, syms []scanner.Symbol) {
+	t.Helper()
+	dir := filepath.Join(root, ".myhelper")
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		t.Fatalf("writeArtifacts: mkdir: %v", err)
+	}
+	proj := scanner.ProjectArtifact{SchemaVersion: "1.0", Summary: "test project"}
+	pkgs := scanner.PackagesArtifact{SchemaVersion: "1.0"}
+	files := scanner.FilesArtifact{SchemaVersion: "1.0", Files: []scanner.FileArtifactEntry{
+		{Path: "internal/pkg/file.go", Package: "pkg"},
+	}}
+	symArtifact := scanner.SymbolsArtifact{SchemaVersion: "1.0", Symbols: syms}
+	writeJSON := func(name string, v interface{}) {
+		data, err := json.Marshal(v)
+		if err != nil {
+			t.Fatalf("writeArtifacts: marshal %s: %v", name, err)
+		}
+		if err := os.WriteFile(filepath.Join(dir, name), data, 0644); err != nil {
+			t.Fatalf("writeArtifacts: write %s: %v", name, err)
+		}
+	}
+	writeJSON("project.json", proj)
+	writeJSON("packages.json", pkgs)
+	writeJSON("files.json", files)
+	writeJSON("symbols.json", symArtifact)
+}
+
+// ---------------------------------------------------------------------------
+// TestSelectionSource_String (CMD-02)
+// ---------------------------------------------------------------------------
+
+func TestSelectionSource_String(t *testing.T) {
+	cases := []struct {
+		src      SelectionSource
+		expected string
+	}{
+		{SourcePreFilter, "pre-filter"},
+		{SourceReRank, "re-rank"},
+		{SourceExpansion, "expansion"},
+	}
+	for _, tc := range cases {
+		got := tc.src.String()
+		if got != tc.expected {
+			t.Errorf("SelectionSource(%d).String() = %q, want %q", tc.src, got, tc.expected)
+		}
+	}
+}
+
+// ---------------------------------------------------------------------------
+// TestBuildInspectContext (CMD-02)
+// ---------------------------------------------------------------------------
+
+func TestBuildInspectContext_NoArtifacts(t *testing.T) {
+	tmpDir := t.TempDir()
+	// No .myhelper/ directory — artifacts missing.
+	result, err := BuildInspectContext(tmpDir, "test query", DefaultStrategy, testCfg, failingChatFn)
+	if err != nil {
+		t.Fatalf("expected nil error on missing artifacts, got %v", err)
+	}
+	if result.GatePassed {
+		t.Error("expected GatePassed == false when no artifacts present")
+	}
+	if len(result.Symbols) != 0 {
+		t.Errorf("expected no symbols, got %d", len(result.Symbols))
+	}
+	if len(result.StageMetrics) != 0 {
+		t.Errorf("expected no stage metrics, got %d", len(result.StageMetrics))
+	}
+}
+
+func TestBuildInspectContext_GateBlocks(t *testing.T) {
+	tmpDir := t.TempDir()
+	syms := []scanner.Symbol{
+		makeSymbol("BuildContext", "retrieval.BuildContext", "func BuildContext(...) (Context, error)", "internal/retrieval/retrieval.go"),
+	}
+	writeArtifacts(t, tmpDir, syms)
+	// noChatFn returns "no" — relevance gate should block all subsequent stages.
+	result, err := BuildInspectContext(tmpDir, "what is 2+2", DefaultStrategy, testCfg, noChatFn)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.GatePassed {
+		t.Error("expected GatePassed == false when gate returns 'no'")
+	}
+	if len(result.StageMetrics) != 0 {
+		t.Errorf("expected no stage metrics when gate blocks, got %d", len(result.StageMetrics))
+	}
+}
+
+func TestBuildInspectContext_WithSymbols(t *testing.T) {
+	tmpDir := t.TempDir()
+	sym := makeSymbol("BuildContext", "retrieval.BuildContext", "func BuildContext(...) (Context, error)", "internal/retrieval/retrieval.go")
+	writeArtifacts(t, tmpDir, []scanner.Symbol{sym})
+
+	// chatFn returns "yes" for the gate call (first call), then the stableID for re-rank (second call).
+	callCount := 0
+	chatFn := func(cfg config.Config, msgs []history.Message) (string, error) {
+		callCount++
+		if callCount == 1 {
+			return "yes", nil // relevance gate passes
+		}
+		return "retrieval.BuildContext", nil // re-rank selects the symbol
+	}
+
+	result, err := BuildInspectContext(tmpDir, "how does BuildContext work", DefaultStrategy, testCfg, chatFn)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !result.GatePassed {
+		t.Error("expected GatePassed == true when gate returns 'yes'")
+	}
+	if len(result.Symbols) == 0 {
+		t.Error("expected at least one symbol in result")
+	}
+	if result.Symbols[0].Symbol.Name != "BuildContext" {
+		t.Errorf("expected symbol BuildContext, got %q", result.Symbols[0].Symbol.Name)
+	}
+	if result.Symbols[0].Source != SourceReRank {
+		t.Errorf("expected source SourceReRank, got %v", result.Symbols[0].Source)
+	}
+	foundPreFilter := false
+	foundReRank := false
+	for _, sm := range result.StageMetrics {
+		if sm.Name == "pre-filter" {
+			foundPreFilter = true
+		}
+		if sm.Name == "re-rank" {
+			foundReRank = true
+		}
+	}
+	if !foundPreFilter {
+		t.Error("expected 'pre-filter' stage metric")
+	}
+	if !foundReRank {
+		t.Error("expected 're-rank' stage metric")
+	}
+	if result.FinalTokens <= 0 {
+		t.Error("expected FinalTokens > 0 when symbols are selected")
+	}
+}
