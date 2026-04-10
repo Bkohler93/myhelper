@@ -8,6 +8,7 @@ import (
 	appctx "github.com/bkohler93/myhelper/internal/context"
 	"github.com/bkohler93/myhelper/internal/history"
 	"github.com/bkohler93/myhelper/internal/ollama"
+	"github.com/bkohler93/myhelper/internal/retrieval"
 	"github.com/spf13/cobra"
 )
 
@@ -47,15 +48,15 @@ func runPattern(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("runPattern: getwd: %w", err)
 	}
-	injected, err := buildInjectedMessages(root, input, cfg, ollama.Chat, pass1PatternFocus)
+	rctx, err := retrieval.BuildContext(root, input, retrieval.PatternStrategy, cfg, ollama.Chat)
 	if err != nil {
-		return fmt.Errorf("runPattern: buildInjectedMessages: %w", err)
+		return fmt.Errorf("runPattern: BuildContext: %w", err)
 	}
 
 	messages := []history.Message{
 		{Role: "system", Content: buildSystemMessage(projectCtx, patternSystemPrompt)},
 	}
-	messages = append(messages, injected...)
+	messages = append(messages, rctx.Messages...)
 	hist := history.New(cfg.TokenThreshold, messages)
 	err = initiateConversation(cfg, hist, ollama.StreamChat)
 	if err != nil {
