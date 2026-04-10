@@ -319,13 +319,13 @@ func TestBuildContext_Integration(t *testing.T) {
 	}
 	writeTestJSON(t, filepath.Join(myhelperDir, "symbols.json"), symbolsArtifact)
 
-	// no-op chatFn: returns "yes" for relevance gate, empty string for re-rank (fallback to all candidates)
+	// chatFn: "yes" for relevance gate; empty string for re-rank (triggers empty-selection fallback).
+	// Re-rank calls include a system message as msgs[0]; relevance gate uses a single user message.
 	noopChatFn := func(cfg config.Config, msgs []history.Message) (string, error) {
-		// For relevance gate: first message content starts with the gate prompt
-		if len(msgs) > 0 && len(msgs[0].Content) > 0 {
-			return "yes", nil
+		if len(msgs) >= 2 && msgs[0].Role == "system" {
+			return "", nil // re-rank: return empty → fallback to all candidates
 		}
-		return "", nil
+		return "yes", nil // relevance gate
 	}
 
 	ctx, err := BuildContext(tmpDir, "how do I use DoThing?", DefaultStrategy, testCfg, noopChatFn)
