@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/bkohler93/myhelper/internal/config"
@@ -349,5 +350,138 @@ func writeTestJSON(t *testing.T, path string, v interface{}) {
 	}
 	if err := os.WriteFile(path, data, 0644); err != nil {
 		t.Fatalf("write %s: %v", path, err)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// TestAssembleMessages — staged assembly and budget stops (CTX-01, CTX-02)
+// ---------------------------------------------------------------------------
+
+func TestAssembleMessages_StageOrder(t *testing.T) {
+	proj := scanner.ProjectArtifact{Summary: "A Go project."}
+	syms := []scanner.Symbol{makeSymbol("DoThing", "pkg.DoThing", "func DoThing() error", "pkg/file.go")}
+	filePaths := []string{"pkg/file.go"}
+	strategy := Strategy{Name: "test", UseSymbols: true, UseFiles: false, MaxTokenRatio: 0.80}
+
+	msgs := assembleMessages("my query", proj, syms, filePaths, "/tmp", strategy, testCfg, makeFakeChatFn(""))
+	if len(msgs) == 0 {
+		t.Fatal("expected non-empty messages")
+	}
+	content := msgs[0].Content
+	projIdx := strings.Index(content, "## Project")
+	symIdx := strings.Index(content, "### Relevant Symbols")
+	fileIdx := strings.Index(content, "### Selected Files")
+	if projIdx == -1 {
+		t.Error("expected '## Project' section in output")
+	}
+	if symIdx == -1 {
+		t.Error("expected '### Relevant Symbols' section in output")
+	}
+	if projIdx != -1 && symIdx != -1 && projIdx > symIdx {
+		t.Errorf("expected project summary before symbols: projIdx=%d symIdx=%d", projIdx, symIdx)
+	}
+	if symIdx != -1 && fileIdx != -1 && symIdx > fileIdx {
+		t.Errorf("expected symbols before file list: symIdx=%d fileIdx=%d", symIdx, fileIdx)
+	}
+}
+
+func TestAssembleMessages_BudgetStop_Symbols(t *testing.T) {
+	proj := scanner.ProjectArtifact{} // no summary
+	// Each signature is "func SymbolNNNNNNNNNN() error" — ~8 tokens each
+	syms := []scanner.Symbol{
+		makeSymbol("Alpha", "pkg.Alpha", "func AlphaLongNameToConsumeTokens() error", "pkg/a.go"),
+		makeSymbol("Beta", "pkg.Beta", "func BetaLongNameToConsumeTokens() error", "pkg/b.go"),
+		makeSymbol("Gamma", "pkg.Gamma", "func GammaLongNameToConsumeTokens() error", "pkg/c.go"),
+	}
+	// Budget so tiny it cannot fit all 3 symbols
+	tinyCfg := config.Config{TokenThreshold: 10}
+	strategy := Strategy{Name: "test", UseSymbols: true, UseFiles: false, MaxTokenRatio: 0.30}
+
+	msgs := assembleMessages("query", proj, syms, nil, "/tmp", strategy, tinyCfg, makeFakeChatFn(""))
+	content := msgs[0].Content
+	// Count how many symbols appear
+	alphaIn := strings.Contains(content, "pkg.Alpha")
+	betaIn := strings.Contains(content, "pkg.Beta")
+	gammaIn := strings.Contains(content, "pkg.Gamma")
+	all3 := alphaIn && betaIn && gammaIn
+	if all3 {
+		t.Error("expected budget stop to exclude at least one symbol; all 3 were included")
+	}
+}
+
+func TestAssembleMessages_BudgetStop_ProjectSummary(t *testing.T) {
+	longSummary := strings.Repeat("word ", 100) // ~100 tokens
+	proj := scanner.ProjectArtifact{Summary: longSummary}
+	tinyCfg := config.Config{TokenThreshold: 10} // budget = 0.80 * 10 = 8 tokens
+	strategy := Strategy{Name: "test", UseSymbols: false, UseFiles: false, MaxTokenRatio: 0.80}
+
+	msgs := assembleMessages("query", proj, nil, nil, "/tmp", strategy, tinyCfg, makeFakeChatFn(""))
+	content := msgs[0].Content
+	if strings.Contains(content, "word word word") {
+		t.Error("expected project summary to be excluded when budget too small")
+	}
+}
+
+// ---------------------------------------------------------------------------
+// TestStrategy_* — per-command Strategy variable values (CTX-04)
+// ---------------------------------------------------------------------------
+
+func TestStrategy_Plan(t *testing.T) {
+	if PlanStrategy.Name != "plan" {
+		t.Errorf("PlanStrategy.Name: want %q got %q", "plan", PlanStrategy.Name)
+	}
+	if PlanStrategy.UseSymbols != false {
+		t.Error("PlanStrategy.UseSymbols should be false (summaries only per CTX-04)")
+	}
+	if PlanStrategy.UseFiles != false {
+		t.Error("PlanStrategy.UseFiles should be false")
+	}
+	if PlanStrategy.MaxTokenRatio != 0.50 {
+		t.Errorf("PlanStrategy.MaxTokenRatio: want 0.50 got %v", PlanStrategy.MaxTokenRatio)
+	}
+}
+
+func TestStrategy_Starter(t *testing.T) {
+	if StarterStrategy.Name != "starter" {
+		t.Errorf("StarterStrategy.Name: want %q got %q", "starter", StarterStrategy.Name)
+	}
+	if StarterStrategy.UseSymbols != true {
+		t.Error("StarterStrategy.UseSymbols should be true")
+	}
+	if StarterStrategy.UseFiles != true {
+		t.Error("StarterStrategy.UseFiles should be true (expands to file content per CTX-04)")
+	}
+	if StarterStrategy.MaxTokenRatio != 0.80 {
+		t.Errorf("StarterStrategy.MaxTokenRatio: want 0.80 got %v", StarterStrategy.MaxTokenRatio)
+	}
+}
+
+func TestStrategy_Lookup(t *testing.T) {
+	if LookupStrategy.Name != "lookup" {
+		t.Errorf("LookupStrategy.Name: want %q got %q", "lookup", LookupStrategy.Name)
+	}
+	if LookupStrategy.UseSymbols != true {
+		t.Error("LookupStrategy.UseSymbols should be true (minimal context per CTX-04)")
+	}
+	if LookupStrategy.UseFiles != false {
+		t.Error("LookupStrategy.UseFiles should be false")
+	}
+	if LookupStrategy.MaxTokenRatio != 0.30 {
+		t.Errorf("LookupStrategy.MaxTokenRatio: want 0.30 got %v", LookupStrategy.MaxTokenRatio)
+	}
+}
+
+func TestStrategy_Pattern(t *testing.T) {
+	if PatternStrategy.Name != "pattern" {
+		t.Errorf("PatternStrategy.Name: want %q got %q", "pattern", PatternStrategy.Name)
+	}
+	if PatternStrategy.UseSymbols != false {
+		t.Error("PatternStrategy.UseSymbols should be false (near-zero context per CTX-04)")
+	}
+	if PatternStrategy.UseFiles != false {
+		t.Error("PatternStrategy.UseFiles should be false")
+	}
+	if PatternStrategy.MaxTokenRatio != 0.10 {
+		t.Errorf("PatternStrategy.MaxTokenRatio: want 0.10 got %v", PatternStrategy.MaxTokenRatio)
 	}
 }
