@@ -79,17 +79,12 @@ func BuildContext(
 
 	// Stage 2: Deterministic pre-filter (RET-01, RET-02)
 	candidates := preFilter(query, syms.Symbols, files.Files)
-	candidates = applyTokenCap(candidates, totalBudget-usedTokens, cfg)
-
-	// Update used tokens after pre-filter (approximate: count candidate signatures)
-	for _, c := range candidates {
-		usedTokens += tokenCount(cfg, c.Signature)
-	}
+	candidates = applyTokenCap(candidates, totalBudget, cfg)
 
 	// Stage 3: LLM re-ranking (RET-03)
 	selected, _ := llmReRank(query, candidates, pkgs.Packages, cfg, chatFn)
 
-	// Recalculate used tokens for selected set only
+	// Count tokens for the final selected set only (drives expansion budget)
 	usedTokens = 0
 	for _, s := range selected {
 		usedTokens += tokenCount(cfg, s.Signature)
