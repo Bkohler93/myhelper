@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"io"
@@ -209,6 +210,33 @@ func TestRunConversationLoop_Summarization(t *testing.T) {
 			t.Fatalf("expected streamFn called once, got %d", fs.called)
 		}
 	})
+}
+
+// TestBuildInjectedMessagesRemoved verifies that the dead helper buildInjectedMessages
+// was fully deleted in Phase 12 plan 03 (CTX-03). This is a regression guard.
+func TestBuildInjectedMessagesRemoved(t *testing.T) {
+	data, err := os.ReadFile("helpers.go")
+	if err != nil {
+		t.Fatalf("could not read helpers.go: %v", err)
+	}
+	if bytes.Contains(data, []byte("buildInjectedMessages")) {
+		t.Error("helpers.go must not contain buildInjectedMessages (CTX-03: deleted in Phase 12.03)")
+	}
+}
+
+// TestMicroPassMigration verifies that the legacy microPass helpers were deleted
+// and replaced by Strategy-based retrieval.BuildContext (CTX-04, Phase 12.03).
+func TestMicroPassMigration(t *testing.T) {
+	data, err := os.ReadFile("helpers.go")
+	if err != nil {
+		t.Fatalf("could not read helpers.go: %v", err)
+	}
+	if bytes.Contains(data, []byte("microPassFile")) {
+		t.Error("helpers.go must not contain microPassFile (CTX-04: deleted in Phase 12.03)")
+	}
+	if bytes.Contains(data, []byte("microPassRe")) {
+		t.Error("helpers.go must not contain microPassRe (CTX-04: deleted in Phase 12.03)")
+	}
 }
 
 // TestReadIndexFile_StaleFlatIndex verifies that readIndexFile returns
