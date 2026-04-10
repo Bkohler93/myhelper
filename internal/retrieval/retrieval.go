@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 
@@ -41,6 +42,38 @@ var DefaultStrategy = Strategy{
 	MaxTokenRatio: contextBudgetFactor,
 }
 
+// PlanStrategy: project summary only. Commands need token budget for multi-turn.
+var PlanStrategy = Strategy{
+	Name:          "plan",
+	UseSymbols:    false,
+	UseFiles:      false,
+	MaxTokenRatio: 0.50,
+}
+
+// StarterStrategy: symbols + file content when budget allows.
+var StarterStrategy = Strategy{
+	Name:          "starter",
+	UseSymbols:    true,
+	UseFiles:      true,
+	MaxTokenRatio: contextBudgetFactor, // 0.80
+}
+
+// LookupStrategy: symbol signatures only, minimal ratio.
+var LookupStrategy = Strategy{
+	Name:          "lookup",
+	UseSymbols:    true,
+	UseFiles:      false,
+	MaxTokenRatio: 0.30,
+}
+
+// PatternStrategy: near-zero context; idiomatic Go questions rarely need project files.
+var PatternStrategy = Strategy{
+	Name:          "pattern",
+	UseSymbols:    false,
+	UseFiles:      false,
+	MaxTokenRatio: 0.10,
+}
+
 // Context holds the outputs of the retrieval pipeline.
 type Context struct {
 	Symbols  []scanner.Symbol  // selected symbols from re-ranking or pre-filter
@@ -66,6 +99,12 @@ func BuildContext(
 	if err != nil {
 		// No artifacts — return bare user query; caller falls back to unaugmented prompt.
 		return Context{Messages: []history.Message{{Role: "user", Content: query}}}, nil
+	}
+
+	// Short-circuit for near-zero strategies (e.g. PatternStrategy): skip LLM calls entirely.
+	if !strategy.UseSymbols && !strategy.UseFiles && strategy.MaxTokenRatio <= 0.10 {
+		msgs := assembleMessages(query, proj, nil, nil, root, strategy, cfg, chatFn)
+		return Context{Messages: msgs}, nil
 	}
 
 	// Stage 1: Relevance gate (RET-04)
@@ -96,7 +135,7 @@ func BuildContext(
 	expandedPaths := expandDeps(selectedPaths, files, expansionBudget, cfg)
 
 	// Assemble messages
-	msgs := assembleMessages(query, selected, expandedPaths, root)
+	msgs := assembleMessages(query, proj, selected, expandedPaths, root, strategy, cfg, chatFn)
 
 	return Context{
 		Symbols:  selected,
@@ -396,30 +435,111 @@ expansionDone:
 // Message Assembly
 // -----------------------------------------------------------------------------
 
-// assembleMessages builds the final message list for the LLM.
-// Includes selected symbol signatures and file paths as context preamble.
-func assembleMessages(query string, symbols []scanner.Symbol, filePaths []string, root string) []history.Message {
-	if len(symbols) == 0 && len(filePaths) == 0 {
-		return []history.Message{{Role: "user", Content: query}}
-	}
-
+// assembleMessages builds the final message list for the LLM using four ordered stages.
+// Stage 1: project summary; Stage 2: symbol matches; Stage 3: file list; Stage 4: file content.
+// Each stage checks remaining budget before appending; a stage that would overflow is skipped.
+// Query is appended after all stages and is NOT counted against the budget.
+func assembleMessages(
+	query string,
+	proj scanner.ProjectArtifact,
+	symbols []scanner.Symbol,
+	filePaths []string,
+	root string,
+	strategy Strategy,
+	cfg config.Config,
+	chatFn scanner.ChatFn,
+) []history.Message {
+	budget := int(float64(cfg.TokenThreshold) * strategy.MaxTokenRatio)
+	usedTokens := 0
 	var sb strings.Builder
-	sb.WriteString("## Project Context\n\n")
+	hasContext := false
 
-	if len(symbols) > 0 {
-		sb.WriteString("### Relevant Symbols\n\n")
-		for _, sym := range symbols {
-			sb.WriteString(fmt.Sprintf("- `%s` (%s): %s\n", sym.StableID, sym.Kind, sym.Signature))
+	// Stage 1: Project summary
+	if proj.Summary != "" {
+		cost := tokenCount(cfg, proj.Summary)
+		if usedTokens+cost <= budget {
+			sb.WriteString("## Project\n\n")
+			sb.WriteString(proj.Summary)
+			sb.WriteString("\n\n")
+			usedTokens += cost
+			hasContext = true
 		}
-		sb.WriteString("\n")
 	}
 
-	if len(filePaths) > 0 {
-		sb.WriteString("### Selected Files\n\n")
-		for _, fp := range filePaths {
-			sb.WriteString(fmt.Sprintf("- %s\n", fp))
+	// Stage 2: Symbol matches
+	if strategy.UseSymbols && len(symbols) > 0 {
+		var symSB strings.Builder
+		added := 0
+		for _, sym := range symbols {
+			line := fmt.Sprintf("- `%s` (%s): %s\n", sym.StableID, sym.Kind, sym.Signature)
+			cost := tokenCount(cfg, line)
+			if usedTokens+cost > budget {
+				break
+			}
+			symSB.WriteString(line)
+			usedTokens += cost
+			added++
 		}
-		sb.WriteString("\n")
+		if added > 0 {
+			sb.WriteString("### Relevant Symbols\n\n")
+			sb.WriteString(symSB.String())
+			sb.WriteString("\n")
+			hasContext = true
+		}
+	}
+
+	// Stage 3: File list (metadata only — cheap)
+	if strategy.UseFiles && len(filePaths) > 0 {
+		var fileSB strings.Builder
+		added := 0
+		for _, fp := range filePaths {
+			line := fmt.Sprintf("- %s\n", fp)
+			cost := tokenCount(cfg, line)
+			if usedTokens+cost > budget {
+				break
+			}
+			fileSB.WriteString(line)
+			usedTokens += cost
+			added++
+		}
+		if added > 0 {
+			sb.WriteString("### Selected Files\n\n")
+			sb.WriteString(fileSB.String())
+			sb.WriteString("\n")
+			hasContext = true
+		}
+	}
+
+	// Stage 4: Conditional file content expansion
+	if strategy.UseFiles {
+		for _, fp := range filePaths {
+			remaining := budget - usedTokens
+			if remaining <= 0 {
+				break
+			}
+			rawBytes, err := os.ReadFile(filepath.Join(root, fp))
+			if err != nil {
+				continue
+			}
+			rawContent := string(rawBytes)
+			rawCost := tokenCount(cfg, rawContent)
+			if rawCost <= remaining {
+				sb.WriteString(fmt.Sprintf("#### %s\n\n```go\n%s\n```\n\n", fp, rawContent))
+				usedTokens += rawCost
+				hasContext = true
+			} else {
+				if content, ok := microPassFile(root, fp, query, cfg, chatFn, remaining); ok {
+					sb.WriteString(fmt.Sprintf("#### %s (partial)\n\n```go\n%s\n```\n\n", fp, content))
+					usedTokens += tokenCount(cfg, content)
+					hasContext = true
+				}
+			}
+		}
+	}
+
+	// If no context was added, return bare user query.
+	if !hasContext {
+		return []history.Message{{Role: "user", Content: query}}
 	}
 
 	sb.WriteString("## Query\n\n")
@@ -480,4 +600,112 @@ func readJSON(path string, v interface{}) error {
 		return fmt.Errorf("readJSON %s: %w", path, err)
 	}
 	return json.Unmarshal(data, v)
+}
+
+// -----------------------------------------------------------------------------
+// Micro-Pass File Extraction (moved from cmd/helpers.go — Phase 12)
+// -----------------------------------------------------------------------------
+
+// microPassRe matches "N-M" line range responses from the micro-pass LLM call.
+var microPassRe = regexp.MustCompile(`(\d+)-(\d+)`)
+
+// microPassFile asks the model which line range of an oversized file is needed
+// to answer the query, then extracts and returns those lines.
+//
+// Fallback chain (per D-10):
+//  1. Build symbol map via scanner.ExtractSymbolMap.
+//  2. Call chatFn with symbol map + query; parse "N-M" response.
+//  3. If parse succeeds and extracted range fits budget: return extracted lines.
+//  4. Otherwise: truncate raw content at last newline that fits budget.
+//  5. If even truncated content doesn't fit: return ("", false).
+//
+// Never panics. Never surfaces an error to the user (per D-06, D-09).
+// root is the project root; path is relative to root.
+func microPassFile(root, path, query string, cfg config.Config, chatFn scanner.ChatFn, budget int) (string, bool) {
+	if budget <= 0 {
+		return "", false
+	}
+
+	absPath := filepath.Join(root, path)
+	rawBytes, err := os.ReadFile(absPath)
+	if err != nil {
+		return "", false
+	}
+	rawContent := string(rawBytes)
+	lines := strings.Split(rawContent, "\n")
+	totalLines := len(lines)
+
+	// Attempt micro-pass: build symbol map and ask the model for a line range.
+	extracted, ok := func() (string, bool) {
+		symbols, err := scanner.ExtractSymbolMap(absPath)
+		if err != nil {
+			return "", false
+		}
+
+		// Build symbol map text (D-01, D-02).
+		var mapSB strings.Builder
+		for _, sym := range symbols {
+			fmt.Fprintf(&mapSB, "%s: lines %d-%d\n", sym.Name, sym.Start, sym.End)
+		}
+
+		// Compose micro-pass messages (D-03, D-04).
+		systemPrompt := "Given this file's symbol map, output ONLY the line range needed to answer the user's request. Format: start-end (e.g., 12-55). Output nothing else."
+		userMsg := fmt.Sprintf("Symbols in %s:\n%s\nUser request: %s", path, mapSB.String(), query)
+		microMessages := []history.Message{
+			{Role: "system", Content: systemPrompt},
+			{Role: "user", Content: userMsg},
+		}
+
+		resp, err := chatFn(cfg, microMessages)
+		if err != nil {
+			return "", false
+		}
+
+		// Parse "N-M" response (D-05).
+		m := microPassRe.FindStringSubmatch(strings.TrimSpace(resp))
+		if m == nil {
+			return "", false
+		}
+		var start, end int
+		fmt.Sscanf(m[1], "%d", &start)
+		fmt.Sscanf(m[2], "%d", &end)
+
+		// Clamp out-of-bounds (D-07).
+		if start < 1 {
+			start = 1
+		}
+		if end > totalLines {
+			end = totalLines
+		}
+		// On invalid range after clamping, fall through to truncation (D-06).
+		if start > end {
+			return "", false
+		}
+
+		// Extract lines [start, end] inclusive (0-indexed slice, 1-indexed line numbers).
+		extracted := strings.Join(lines[start-1:end], "\n")
+		tokCount := history.New(cfg.TokenThreshold, []history.Message{{Role: "user", Content: extracted}}).TokenCount()
+		if tokCount > budget {
+			return "", false
+		}
+		return extracted, true
+	}()
+
+	if ok {
+		return extracted, true
+	}
+
+	// Truncation fallback (D-08): scan from right for last newline that fits.
+	for i := len(rawContent) - 1; i >= 0; i-- {
+		if rawContent[i] == '\n' {
+			prefix := rawContent[:i+1]
+			tokCount := history.New(cfg.TokenThreshold, []history.Message{{Role: "user", Content: prefix}}).TokenCount()
+			if tokCount <= budget {
+				return prefix, true
+			}
+		}
+	}
+
+	// D-09: even a single line doesn't fit — skip this file.
+	return "", false
 }
