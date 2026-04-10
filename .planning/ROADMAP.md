@@ -48,7 +48,7 @@ Full archive: `.planning/milestones/v1.2-ROADMAP.md`
 - [x] **Phase 9: Extended AST & Symbol Extraction** — Enrich go/ast extraction with kind, signature, line range, imports, call edges, usage references, and stable identifiers (completed 2026-04-09)
 - [x] **Phase 10: Hierarchical Index Artifacts** — Replace flat `index.json` with four layered artifact files: `project.json`, `packages.json`, `files.json`, `symbols.json` (completed 2026-04-09)
 - [x] **Phase 11: Retrieval Package** — New `internal/retrieval/` package with deterministic pre-filter, LLM re-ranking, relevance gate, and dependency-aware expansion (completed 2026-04-10)
-- [ ] **Phase 12: Adaptive Context Builder & Strategies** — Staged context assembly replacing `buildInjectedMessages`, with per-command retrieval strategies
+- [x] **Phase 12: Adaptive Context Builder & Strategies** — Staged context assembly replacing `buildInjectedMessages`, with per-command retrieval strategies (completed 2026-04-10)
 - [ ] **Phase 13: Commands & Flags** — `--no-context` flag, `inspect` command, and `ApplyFlagOverrides` fix
 
 ## Phase Details
@@ -115,9 +115,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 12-01-PLAN.md — TDD: Write failing tests for stage-aware assembleMessages and Strategy variables (CTX-01, CTX-02, CTX-04)
-- [ ] 12-02-PLAN.md — Implement stage-aware assembleMessages, move microPassFile, define Strategy variables (CTX-01, CTX-02, CTX-04)
-- [ ] 12-03-PLAN.md — Rewire four commands to retrieval.BuildContext; delete buildInjectedMessages and dead helpers (CTX-03, CTX-04)
+- [x] 12-01-PLAN.md — TDD: Write failing tests for stage-aware assembleMessages and Strategy variables (CTX-01, CTX-02, CTX-04)
+- [x] 12-02-PLAN.md — Implement stage-aware assembleMessages, move microPassFile, define Strategy variables (CTX-01, CTX-02, CTX-04)
+- [x] 12-03-PLAN.md — Rewire four commands to retrieval.BuildContext; delete buildInjectedMessages and dead helpers (CTX-03, CTX-04)
 
 ### Phase 13: Commands & Flags
 **Goal**: Users can bypass retrieval entirely with `--no-context`, debug retrieval decisions with `inspect`, and `--token-limit` correctly caps retrieval budget in all query commands
@@ -127,7 +127,12 @@ Plans:
   1. `myhelper plan --no-context "..."` streams a response with no project context injected; the flag is available on all four query commands
   2. `myhelper inspect "..."` prints per-stage output: selected symbols and files, token usage per stage, final context size, and selection source (pre-filter, re-rank, or expansion) for each selected entry
   3. `myhelper plan --token-limit 3000 "..."` uses 3000 as the budget cap for retrieval; the flag's value is correctly applied via `ApplyFlagOverrides` before any retrieval math runs
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [ ] 13-01-PLAN.md — Wave 0 TDD: failing tests for BuildInspectContext, SelectionSource, --no-context flag, ApplyFlagOverrides (CMD-01, CMD-02, CMD-03)
+- [ ] 13-02-PLAN.md — ApplyFlagOverrides + --no-context flag: root.go + four query commands (CMD-01, CMD-03)
+- [ ] 13-03-PLAN.md — BuildInspectContext + cmd/inspect.go (CMD-02)
 
 ## Progress
 
@@ -144,5 +149,5 @@ Plans:
 | 9. Extended AST & Symbol Extraction | v1.3 | 2/2 | Complete   | 2026-04-09 |
 | 10. Hierarchical Index Artifacts | v1.3 | 2/2 | Complete   | 2026-04-09 |
 | 11. Retrieval Package | v1.3 | 1/1 | Complete   | 2026-04-10 |
-| 12. Adaptive Context Builder & Strategies | v1.3 | 0/3 | Not started | - |
-| 13. Commands & Flags | v1.3 | 0/? | Not started | - |
+| 12. Adaptive Context Builder & Strategies | v1.3 | 3/3 | Complete   | 2026-04-10 |
+| 13. Commands & Flags | v1.3 | 0/3 | Not started | - |
