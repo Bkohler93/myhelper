@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: Structured Code Intelligence
-status: in_progress
-last_updated: "2026-04-10"
-last_activity: 2026-04-10
+status: v1.3 milestone archived
+stopped_at: Milestone complete — archived 2026-04-10
+last_updated: "2026-04-10T00:00:00.000Z"
 progress:
   total_phases: 5
   completed_phases: 5
-  total_plans: 13
-  completed_plans: 13
+  total_plans: 11
+  completed_plans: 11
   percent: 100
 ---
 
@@ -17,22 +17,23 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md
+See: .planning/PROJECT.md (updated 2026-04-10)
 
-**Core value:** Get a useful, project-aware answer from the local model in one command, without context-bloat or round-trips to an external API.
-**Current focus:** v1.3 Structured Code Intelligence — Phase 13 complete
+**Core value:** Get a precise, project-aware answer from a local 7B model by enabling it to navigate a structured map of the codebase—without context bloat or external APIs.
+**Current focus:** Planning next milestone — run `/gsd-new-milestone` to define v1.4
 
 ## Current Position
 
-Milestone: v1.3 Structured Code Intelligence — In Progress
-Phases 9-13 complete (5/5). All 13 plans shipped.
+Milestone v1.3 Structured Code Intelligence — **COMPLETE AND ARCHIVED**
+
+All 5 phases (9-13), 11 plans shipped. Tag v1.3 created.
 
 ## Performance Metrics
 
 **Velocity:**
 
 - Total plans completed: 37 (across v1.0, v1.1, v1.2, v1.3)
-- v1.3: 13 plans across 5 phases
+- v1.3: 11 plans across 5 phases
 
 **By Phase:**
 
@@ -58,14 +59,15 @@ Phases 9-13 complete (5/5). All 13 plans shipped.
 
 Key decisions are logged in PROJECT.md Key Decisions table.
 
-### Known Tech Debt (v1.3)
+### Known Tech Debt (carried forward)
 
-- Sync guard checks `meta.json` instead of `index.json` — overly strict on interrupted init
-- `generateContextMD` fails fast on empty summaries dir — aborts init/sync if no packages export symbols
-- `deltaIndex` re-uses `existing.Meta` without calling `ReadMeta` — go.mod changes not reflected in index.json until next `init`
-- Phases 06 and 07 missing VERIFICATION.md — CTX-01, CTX-02, CTX-04 formally unverified (accepted as tech debt at milestone completion)
-- `inspect` command ignores `--no-context` flag (WR-04 from phase 13 code review)
+- `Symbol.CallEdges`/`TypeRefs` stored but not consumed by retrieval pipeline (SYM-05, SYM-06)
+- `PackageEntry.Responsibility` written to `packages.json` but unused in `llmReRank` (IDX-03, RET-03)
+- Dual context injection (`context.md` + `proj.Summary`) — same source, redundant tokens (CTX-01, CTX-02)
+- Phase 11 VERIFICATION.md missing — RET-01–06 confirmed by downstream phases but not formally verified
+- `inspect` ignores `--no-context` flag (WR-04 from Phase 13 code review)
 - `BuildContext`/`BuildInspectContext` silently discard `llmReRank` error return (WR-02)
+- `Symbol.Start/End` stored in artifact but `microPassFile` re-parses AST via `ExtractSymbolMap` at runtime (SYM-03)
 
 ### Blockers/Concerns
 
@@ -74,5 +76,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-04-10
-Stopped at: Phase 13 complete — Commands & Flags
-Resume: `/gsd-complete-milestone` to archive v1.3 or `/gsd-new-milestone` to plan next
+Stopped at: v1.3 milestone archived
+Resume: `/gsd-new-milestone` to plan v1.4

@@ -129,6 +129,50 @@
 
 ---
 
+## Milestone: v1.3 — Structured Code Intelligence
+
+**Shipped:** 2026-04-10
+**Phases:** 5 (9-13) | **Plans:** 11 | **Commits:** 66
+
+### What Was Built
+- `ExtractSymbolsFull` capturing full symbol profile (kind, signature, line range, imports, call edges, type refs, stable IDs) for all exported Go symbols via go/ast (Phase 9)
+- Four layered artifact files (`project.json`, `packages.json`, `files.json`, `symbols.json`) replacing flat `index.json`, produced by `init` and `sync` with schema version field (Phase 10)
+- Four-stage LLM retrieval pipeline (relevance gate → keyword pre-filter → LLM re-rank → dep expansion) in `internal/retrieval/` behind `BuildContext` — 13 unit tests (Phase 11)
+- Stage-aware token-bounded context assembly (`assembleMessages`) with per-command strategies replacing `buildInjectedMessages` (Phase 12)
+- `--no-context` flag, `inspect` dry-run command, and `--token-limit` correctly wired via `ApplyFlagOverrides` across all query commands (Phase 13)
+
+### What Worked
+- Implementing Phase 11 as full functional code (not stubs) in a single plan worked well — the retrieval package is self-contained and well-tested before Phase 12 depended on it
+- White-box tests (`package retrieval` not `package retrieval_test`) gave clean access to unexported pipeline functions without additional exports
+- Fail-open gate design (treat anything not starting with "no" as "yes") is the right call for a small model — silent context omission is harder to debug than extra tokens
+- Moving `microPassFile` from `cmd/helpers.go` to `internal/retrieval/` during Phase 12 was a clean refactor that enforced the retrieval-logic-in-retrieval-package rule with no regressions
+- Code review pipeline caught WR-01, WR-02, WR-04 before shipping; REVIEW-FIX.md workflow continues to pay off
+
+### What Was Inefficient
+- Phase 11 never produced a VERIFICATION.md — RET-01–06 ended the milestone formally "partial" despite the implementation being correct; the verification step was skipped under time pressure and required downstream phases to serve as indirect confirmation
+- `Symbol.CallEdges`/`TypeRefs` were extracted and stored (2 full plan's worth of AST walking) but the retrieval pipeline never reads them — the work shipped as tech debt rather than live functionality
+- `PackageEntry.Responsibility` and `FileArtifactEntry.ExportedNames` are both written to artifacts but unused by the retrieval pipeline — similar story
+- Dual context injection remained: both `appctx.LoadContext()` (context.md) and `proj.Summary` (from `BuildContext`) carry project descriptions derived from the same package summaries — discovered at audit, not during implementation
+
+### Patterns Established
+- `smallCorpusThreshold=40` bifurcation in pre-filter: small projects get all symbols as additive hints, large projects get keyword-gated candidates — avoids over-filtering on the primary use case (small personal projects)
+- `expansionBudgetFactor=0.60` cap on dependency expansion: prevents expansion from consuming the budget needed for the actual user query
+- `TestDependencyExpansion_BudgetCap` using `budget=0` as a deterministic test of the cap behavior — cleaner than building a large fake corpus
+- Strategy struct as the retrieval configuration contract: `UseSymbols`, `UseFiles`, `MaxTokenRatio` fields give per-command control without scattered conditionals
+
+### Key Lessons
+1. If a phase produces data that nothing consumes, that's a design gap — wire it or defer the extraction, but don't do both halves of work and leave the integration as "tech debt"
+2. VERIFICATION.md should be non-negotiable after each phase — Phase 11's missing verification propagated to the audit as 6 partial requirements that required manual cross-referencing to resolve
+3. The audit status `tech_debt` is a legitimate milestone state — no need to chase `passed` if the gaps are understood and accepted
+4. `microPassFile` moving packages mid-milestone (cmd → retrieval) was smooth because the function was pure (no global state, clear inputs/outputs) — keep retrieval functions pure for portability
+
+### Cost Observations
+- Model mix: balanced profile (sonnet for planning/review, executor agents for implementation)
+- Sessions: 2 focused sessions over 2 days
+- Notable: 10,687 insertions across 57 files; 11 plans, 66 commits; `internal/retrieval/` is now the largest package by code
+
+---
+
 ## Cross-Milestone Trends
 
 ### Process Evolution
@@ -138,6 +182,7 @@
 | v1.0 | 1 | 1 | Initial baseline |
 | v1.1 | 2 | 3 | TDD throughout; worktree isolation per plan |
 | v1.2 | 1 | 4 | Two-pass retrieval; code review pipeline; 40 commits in one session |
+| v1.3 | 2 | 5 | Structured retrieval pipeline; artifact index; per-command strategies; 66 commits |
 
 ### Cumulative Quality
 
@@ -146,6 +191,7 @@
 | v1.0 | 3 human UAT | pending | Requires live Ollama instance |
 | v1.1 | 18 automated (Go test) | all packages | integration path (live Ollama) still requires manual verification |
 | v1.2 | 2,331 LOC tests | all packages | test LOC exceeds source LOC; integration (live Ollama) still manual |
+| v1.3 | ~2,900 LOC tests | all packages | 13 retrieval unit tests; Phase 11 VERIFICATION.md gap; integration still manual |
 
 ### Top Lessons (Verified Across Milestones)
 

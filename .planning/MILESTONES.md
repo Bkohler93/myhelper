@@ -1,5 +1,28 @@
 # Milestones
 
+## v1.3 Structured Code Intelligence (Shipped: 2026-04-10)
+
+**Phases completed:** 5 phases, 11 plans
+**Files changed:** 77 files, +15,250 / -108 lines
+**Timeline:** 2026-04-08 → 2026-04-10 (2 days)
+
+**Key accomplishments:**
+
+- `ExtractSymbolsFull` captures full symbol profile (kind, signature, line range, imports, call edges, type refs, stable IDs) for all exported Go symbols via go/ast (Phase 9)
+- `init` and `sync` produce four layered artifact files (`project.json`, `packages.json`, `files.json`, `symbols.json`) replacing flat `index.json` with schema version field (Phase 10)
+- Four-stage LLM retrieval pipeline (relevance gate → keyword pre-filter → LLM re-rank → dep expansion) in `internal/retrieval/` behind `BuildContext` entry point — 13 tests (Phase 11)
+- Stage-aware token-bounded context assembly (`assembleMessages`) with per-command strategies — `plan` summaries-only; `starter` symbols+files; `lookup` minimal; `pattern` near-zero (Phase 12)
+- `--no-context` flag, `inspect` dry-run command, and `--token-limit` wired via `ApplyFlagOverrides` across all four query commands (Phase 13)
+
+### Known Gaps (accepted as tech debt)
+
+- **RET-01–06** — Phase 11 missing VERIFICATION.md; implementation confirmed by downstream phase verifications and 13 unit tests
+- **SYM-05, SYM-06** — `Symbol.CallEdges`/`TypeRefs` stored in `symbols.json` but not consumed by retrieval pipeline
+- **IDX-03, RET-03** — `PackageEntry.Responsibility` written to `packages.json` but unused in `llmReRank`
+- **CTX-01, CTX-02** — Dual context injection (`context.md` + `proj.Summary`) — same source, redundant tokens
+
+---
+
 ## v1.2 Smart Context (Shipped: 2026-04-09)
 
 **Phases completed:** 4 phases, 13 plans, 13 tasks
