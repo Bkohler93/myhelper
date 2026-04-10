@@ -46,7 +46,7 @@ Full archive: `.planning/milestones/v1.2-ROADMAP.md`
 **Milestone Goal:** Transform context handling from static injection into a structured, navigable representation of the codebase. The model retrieves incrementally (symbol → file → dependency expansion) rather than guessing context upfront.
 
 - [x] **Phase 9: Extended AST & Symbol Extraction** — Enrich go/ast extraction with kind, signature, line range, imports, call edges, usage references, and stable identifiers (completed 2026-04-09)
-- [ ] **Phase 10: Hierarchical Index Artifacts** — Replace flat `index.json` with four layered artifact files: `project.json`, `packages.json`, `files.json`, `symbols.json`
+- [x] **Phase 10: Hierarchical Index Artifacts** — Replace flat `index.json` with four layered artifact files: `project.json`, `packages.json`, `files.json`, `symbols.json` (completed 2026-04-09)
 - [ ] **Phase 11: Retrieval Package** — New `internal/retrieval/` package with deterministic pre-filter, LLM re-ranking, relevance gate, and dependency-aware expansion
 - [ ] **Phase 12: Adaptive Context Builder & Strategies** — Staged context assembly replacing `buildInjectedMessages`, with per-command retrieval strategies
 - [ ] **Phase 13: Commands & Flags** — `--no-context` flag, `inspect` command, and `ApplyFlagOverrides` fix
@@ -83,8 +83,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 10-01-PLAN.md — Artifact struct types + BuildArtifacts (Symbol.FilePath, ProjectMeta.GoVersion, TDD)
-- [ ] 10-02-PLAN.md — Wire BuildArtifacts into init/sync; ErrStaleFlatIndex in readIndexFile
+- [x] 10-01-PLAN.md — Artifact struct types + BuildArtifacts (Symbol.FilePath, ProjectMeta.GoVersion, TDD)
+- [x] 10-02-PLAN.md — Wire BuildArtifacts into init/sync; ErrStaleFlatIndex in readIndexFile
 
 ### Phase 11: Retrieval Package
 **Goal**: A standalone `internal/retrieval/` package provides the full retrieval pipeline — deterministic keyword/symbol pre-filter, LLM re-ranking, context relevance gate, and depth-1 dependency expansion — behind a single `BuildContext` entry point
@@ -97,7 +97,10 @@ Plans:
   4. The LLM re-ranking pass evaluates pre-filtered candidates using summaries and signatures (not full file content)
   5. The relevance gate returns an empty context set when the query does not require repository context, and retrieval is skipped entirely
   6. Dependency-aware expansion adds depth-1 import-graph neighbors of selected files, bounded at ≤ 60% of the remaining token budget
-**Plans**: TBD
+**Plans**: 1 plan
+
+Plans:
+- [ ] 11-01-PLAN.md — Full retrieval pipeline: package skeleton, all 4 stages (pre-filter, gate, re-ranking, expansion), BuildContext entry point, and test suite
 
 ### Phase 12: Adaptive Context Builder & Strategies
 **Goal**: The adaptive context builder assembles context in token-bounded stages (project summary → symbol matches → file selection → conditional expansion), replacing `buildInjectedMessages`, with per-command strategies that calibrate retrieval depth to task needs
@@ -134,7 +137,7 @@ Plans:
 | 7. Two-Pass Context Injection | v1.2 | 2/2 | Complete | 2026-04-08 |
 | 8. Large File Micro-Pass | v1.2 | 2/2 | Complete | 2026-04-08 |
 | 9. Extended AST & Symbol Extraction | v1.3 | 2/2 | Complete   | 2026-04-09 |
-| 10. Hierarchical Index Artifacts | v1.3 | 0/2 | Not started | - |
-| 11. Retrieval Package | v1.3 | 0/? | Not started | - |
+| 10. Hierarchical Index Artifacts | v1.3 | 2/2 | Complete   | 2026-04-09 |
+| 11. Retrieval Package | v1.3 | 0/1 | Not started | - |
 | 12. Adaptive Context Builder & Strategies | v1.3 | 0/? | Not started | - |
 | 13. Commands & Flags | v1.3 | 0/? | Not started | - |
