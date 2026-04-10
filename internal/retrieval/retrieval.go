@@ -1,0 +1,488 @@
+// Package retrieval implements the four-stage context retrieval pipeline:
+// relevance gate → keyword pre-filter → LLM re-ranking → dependency expansion.
+//
+// Entry point: BuildContext.
+package retrieval
+
+import (
+	"encoding/json"
+	"fmt"
+	"os"
+	"path/filepath"
+	"sort"
+	"strings"
+
+	"github.com/bkohler93/myhelper/internal/config"
+	"github.com/bkohler93/myhelper/internal/history"
+	"github.com/bkohler93/myhelper/internal/scanner"
+)
+
+// Budget constants — match the safety factors established in internal/scanner/index.go.
+const (
+	contextBudgetFactor   = 0.80 // overall context budget as fraction of TokenThreshold
+	expansionBudgetFactor = 0.60 // dependency expansion as fraction of REMAINING budget (RET-05)
+	smallCorpusThreshold  = 40   // file count at or below which pre-filter acts as additive hint (RET-02)
+)
+
+// Strategy configures which pipeline stages run and at what depth.
+// Phase 12 will wire per-command strategies; Phase 11 uses a single default.
+type Strategy struct {
+	Name          string  // "plan" | "starter" | "lookup" | "pattern"
+	UseSymbols    bool    // include symbol-level context
+	UseFiles      bool    // expand to file content
+	MaxTokenRatio float64 // fraction of cfg.TokenThreshold available for context (e.g. 0.80)
+}
+
+// DefaultStrategy is used when the caller does not specify a strategy.
+var DefaultStrategy = Strategy{
+	Name:          "default",
+	UseSymbols:    true,
+	UseFiles:      true,
+	MaxTokenRatio: contextBudgetFactor,
+}
+
+// Context holds the outputs of the retrieval pipeline.
+type Context struct {
+	Symbols  []scanner.Symbol  // selected symbols from re-ranking or pre-filter
+	Files    []string          // selected file paths (relative to root)
+	Messages []history.Message // final assembled messages ready for the LLM
+}
+
+// BuildContext runs the four-stage retrieval pipeline and returns selected symbols,
+// selected files, and final assembled messages.
+//
+// Pipeline: relevance gate → pre-filter → LLM re-ranking → dependency expansion.
+//
+// If artifacts do not exist (project not initialised), BuildContext returns a bare
+// user-query message without error so callers can degrade gracefully.
+func BuildContext(
+	root string,
+	query string,
+	strategy Strategy,
+	cfg config.Config,
+	chatFn scanner.ChatFn,
+) (Context, error) {
+	proj, pkgs, files, syms, err := loadArtifacts(root)
+	if err != nil {
+		// No artifacts — return bare user query; caller falls back to unaugmented prompt.
+		return Context{Messages: []history.Message{{Role: "user", Content: query}}}, nil
+	}
+
+	// Stage 1: Relevance gate (RET-04)
+	if !needsContext(query, proj.Summary, cfg, chatFn) {
+		return Context{Messages: []history.Message{{Role: "user", Content: query}}}, nil
+	}
+
+	// Budget tracking
+	totalBudget := int(float64(cfg.TokenThreshold) * contextBudgetFactor)
+	usedTokens := 0
+
+	// Stage 2: Deterministic pre-filter (RET-01, RET-02)
+	candidates := preFilter(query, syms.Symbols, files.Files)
+	candidates = applyTokenCap(candidates, totalBudget-usedTokens, cfg)
+
+	// Update used tokens after pre-filter (approximate: count candidate signatures)
+	for _, c := range candidates {
+		usedTokens += tokenCount(cfg, c.Signature)
+	}
+
+	// Stage 3: LLM re-ranking (RET-03)
+	selected, _ := llmReRank(query, candidates, pkgs.Packages, cfg, chatFn)
+
+	// Recalculate used tokens for selected set only
+	usedTokens = 0
+	for _, s := range selected {
+		usedTokens += tokenCount(cfg, s.Signature)
+	}
+
+	// Stage 4: Dependency expansion (RET-05)
+	selectedPaths := uniqueFilePaths(selected)
+	expansionBudget := int(float64(totalBudget-usedTokens) * expansionBudgetFactor)
+	expandedPaths := expandDeps(selectedPaths, files, expansionBudget, cfg)
+
+	// Assemble messages
+	msgs := assembleMessages(query, selected, expandedPaths, root)
+
+	return Context{
+		Symbols:  selected,
+		Files:    expandedPaths,
+		Messages: msgs,
+	}, nil
+}
+
+// -----------------------------------------------------------------------------
+// Stage 1: Relevance Gate (RET-04)
+// -----------------------------------------------------------------------------
+
+const relevanceGatePrompt = `Answer only "yes" or "no". Does answering the following query require looking at the project's source code? Query: `
+
+// needsContext returns true if the query requires repository context.
+// Fails open: any response that does not clearly start with "no" is treated as "yes".
+func needsContext(query, projectSummary string, cfg config.Config, chatFn scanner.ChatFn) bool {
+	msg := relevanceGatePrompt + query
+	if projectSummary != "" {
+		msg = "Project: " + projectSummary + "\n\n" + msg
+	}
+	messages := []history.Message{
+		{Role: "user", Content: msg},
+	}
+	response, err := chatFn(cfg, messages)
+	if err != nil {
+		return true // fail open — context omission is worse than extra tokens
+	}
+	lower := strings.ToLower(strings.TrimSpace(response))
+	return !strings.HasPrefix(lower, "no")
+}
+
+// -----------------------------------------------------------------------------
+// Stage 2: Deterministic Pre-Filter (RET-01, RET-02)
+// -----------------------------------------------------------------------------
+
+// preFilter scores each symbol against query terms and returns scored candidates.
+// When the corpus is small (≤ smallCorpusThreshold files), all symbols pass through
+// as additive hints (RET-02); the token cap trims them afterwards.
+func preFilter(query string, symbols []scanner.Symbol, files []scanner.FileArtifactEntry) []scanner.Symbol {
+	terms := strings.Fields(strings.ToLower(query))
+
+	// Small corpus path (RET-02): treat all symbols as candidates when ≤ 40 files.
+	if len(files) <= smallCorpusThreshold {
+		if len(symbols) == 0 {
+			return symbols
+		}
+		// Still score so that the most relevant rise to the top after cap.
+		return scoreAndSort(symbols, terms)
+	}
+
+	// Large corpus path (RET-01): only include symbols with at least one term match.
+	type scored struct {
+		sym   scanner.Symbol
+		score int
+	}
+	var results []scored
+	for _, sym := range symbols {
+		score := scoreSymbol(sym, terms)
+		if score > 0 {
+			results = append(results, scored{sym, score})
+		}
+	}
+	if len(results) == 0 {
+		// Pitfall 3 guard: never return empty on large corpus — return top-N by name length
+		// (a rough proxy for more specific/descriptive names).
+		return scoreAndSort(symbols, terms)
+	}
+	sort.Slice(results, func(i, j int) bool { return results[i].score > results[j].score })
+	out := make([]scanner.Symbol, 0, len(results))
+	for _, r := range results {
+		out = append(out, r.sym)
+	}
+	return out
+}
+
+func scoreSymbol(sym scanner.Symbol, terms []string) int {
+	haystack := strings.ToLower(sym.Name + " " + sym.Signature + " " + sym.StableID)
+	score := 0
+	for _, term := range terms {
+		if strings.Contains(haystack, term) {
+			score++
+		}
+	}
+	return score
+}
+
+func scoreAndSort(symbols []scanner.Symbol, terms []string) []scanner.Symbol {
+	type scored struct {
+		sym   scanner.Symbol
+		score int
+	}
+	results := make([]scored, len(symbols))
+	for i, sym := range symbols {
+		results[i] = scored{sym, scoreSymbol(sym, terms)}
+	}
+	sort.Slice(results, func(i, j int) bool { return results[i].score > results[j].score })
+	out := make([]scanner.Symbol, len(results))
+	for i, r := range results {
+		out[i] = r.sym
+	}
+	return out
+}
+
+// applyTokenCap trims candidates to fit within the given token budget.
+func applyTokenCap(candidates []scanner.Symbol, budget int, cfg config.Config) []scanner.Symbol {
+	used := 0
+	var result []scanner.Symbol
+	for _, c := range candidates {
+		cost := tokenCount(cfg, c.Signature)
+		if used+cost > budget {
+			break
+		}
+		result = append(result, c)
+		used += cost
+	}
+	return result
+}
+
+// -----------------------------------------------------------------------------
+// Stage 3: LLM Re-Ranking (RET-03)
+// -----------------------------------------------------------------------------
+
+const reRankSystemPrompt = `You are a code search assistant. Given the user's query and a list of candidate symbols with their signatures, output ONLY the stable identifiers (stableID) of symbols that are directly relevant to the query, one per line. Output nothing else.`
+
+// llmReRank asks the LLM to confirm which candidates are relevant.
+// Falls back to all candidates on LLM failure or empty response (Pitfall 7 guard).
+func llmReRank(
+	query string,
+	candidates []scanner.Symbol,
+	pkgs []scanner.PackageEntry,
+	cfg config.Config,
+	chatFn scanner.ChatFn,
+) ([]scanner.Symbol, error) {
+	if len(candidates) == 0 {
+		return candidates, nil // Pitfall 7: guard against empty input
+	}
+
+	var sb strings.Builder
+	for _, sym := range candidates {
+		sb.WriteString(sym.StableID + ": " + sym.Signature + "\n")
+	}
+
+	messages := []history.Message{
+		{Role: "system", Content: reRankSystemPrompt},
+		{Role: "user", Content: "Query: " + query + "\n\nCandidates:\n" + sb.String()},
+	}
+	response, err := chatFn(cfg, messages)
+	if err != nil {
+		return candidates, nil // fallback: return all candidates on LLM failure
+	}
+
+	selected := filterByStableIDs(candidates, response)
+	if len(selected) == 0 {
+		return candidates, nil // fallback: LLM returned nothing useful
+	}
+	return selected, nil
+}
+
+// filterByStableIDs returns candidates whose StableID appears in the LLM response.
+func filterByStableIDs(candidates []scanner.Symbol, response string) []scanner.Symbol {
+	responseLines := strings.Fields(response)
+	seen := make(map[string]bool, len(responseLines))
+	for _, line := range responseLines {
+		seen[strings.TrimSpace(line)] = true
+	}
+	var result []scanner.Symbol
+	for _, c := range candidates {
+		if seen[c.StableID] {
+			result = append(result, c)
+		}
+	}
+	return result
+}
+
+// -----------------------------------------------------------------------------
+// Stage 4: Dependency Expansion (RET-05)
+// -----------------------------------------------------------------------------
+
+// expandDeps adds depth-1 import neighbors of selectedPaths that are project-internal files.
+// The expansion is bounded by budgetCap tokens (RET-05: ≤ 60% of remaining budget).
+func expandDeps(
+	selectedPaths []string,
+	filesArtifact scanner.FilesArtifact,
+	budgetCap int,
+	cfg config.Config,
+) []string {
+	// Build import-path → []relFilePath map from files.json.
+	// FileArtifactEntry.Imports contains full module-qualified import paths.
+	// We match against the derived import path for each file entry (Pitfall 6 guard).
+	importToFiles := make(map[string][]string)
+	for _, fe := range filesArtifact.Files {
+		// Derive this file's import path: it is stored in the FileArtifactEntry itself
+		// as the Package field (short name), but we need the full path.
+		// Use the file path to find it: strip filename, join with module path prefix.
+		// Since we stored imports as full paths and FileArtifactEntry.Path is relative,
+		// we index by Path for lookup.
+		for _, imp := range fe.Imports {
+			importToFiles[imp] = append(importToFiles[imp], fe.Path)
+		}
+	}
+
+	// Build reverse: relPath → importPath for the selected files.
+	// We need to find which entries import the selected files' packages.
+	// Strategy: find FileArtifactEntry.Imports that resolve to selected file paths.
+	selectedSet := make(map[string]bool, len(selectedPaths))
+	for _, p := range selectedPaths {
+		selectedSet[p] = true
+	}
+
+	// Find all files whose Imports reference the packages of selected files.
+	// We build a map: file path → set of import paths declared in that file.
+	// Then for each project file, if it imports a package that contains a selected file, include it.
+	//
+	// Simpler depth-1 approach: for each selected file, find the files.json entries
+	// whose Imports list contains an import path that matches this file's package.
+	// Since FileArtifactEntry does not store the file's own import path directly,
+	// we derive it from the file's own Imports field's package relationship.
+	// Per Pitfall 6: import path ≠ short Package name.
+	// Best approach: collect ALL imports of selected files, then find files.json entries
+	// whose Path matches one of those imports' file paths.
+
+	// Collect imports of all selected files.
+	selectedFileImports := make(map[string]bool)
+	for _, fe := range filesArtifact.Files {
+		if selectedSet[fe.Path] {
+			for _, imp := range fe.Imports {
+				selectedFileImports[imp] = true
+			}
+		}
+	}
+
+	// Build import path → file path mapping:
+	// For each file entry, find which import paths it "is" by matching against
+	// importToFiles built above. Use the reverse: file entry path appears as the
+	// target of some imports.
+	// We need to identify which import paths correspond to which file paths.
+	// Since BuildArtifacts derives importPath = moduleName + "/" + dir (artifacts.go line 119-121),
+	// files in the same directory share an import path.
+	// Build: importPath → []filePath by grouping FileArtifactEntry by their directory.
+
+	// Derive each file's own import path using its Path field.
+	// Path is relative (e.g., "internal/scanner/ast.go") → importPath = module + "/" + dir.
+	// We don't have the module path here, but we can match on the directory suffix.
+	// Alternative: match based on what other files import them.
+	// For depth-1, we add files that are themselves in the packages that selected files import.
+
+	// Build: importPath → files with that import path (by grouping by directory).
+	dirToFiles := make(map[string][]string)
+	for _, fe := range filesArtifact.Files {
+		dir := filepath.ToSlash(filepath.Dir(fe.Path))
+		dirToFiles[dir] = append(dirToFiles[dir], fe.Path)
+	}
+
+	// Match selected file imports to project directories.
+	// An import like "github.com/bkohler93/myhelper/internal/scanner" maps to dir "internal/scanner".
+	addedSet := make(map[string]bool)
+	for _, p := range selectedPaths {
+		addedSet[p] = true
+	}
+	result := make([]string, len(selectedPaths))
+	copy(result, selectedPaths)
+
+	usedBudget := 0
+
+	for imp := range selectedFileImports {
+		// Extract the package directory suffix from the import path.
+		// Import paths are like "github.com/bkohler93/myhelper/internal/scanner".
+		// Find project-internal packages by looking for a dir match.
+		parts := strings.Split(imp, "/")
+		// Try progressively shorter suffixes to find a matching directory.
+		for suffixLen := len(parts); suffixLen >= 1; suffixLen-- {
+			suffix := strings.Join(parts[len(parts)-suffixLen:], "/")
+			if neighborFiles, ok := dirToFiles[suffix]; ok {
+				for _, nf := range neighborFiles {
+					if addedSet[nf] {
+						continue
+					}
+					cost := tokenCount(cfg, nf)
+					if usedBudget+cost > budgetCap {
+						goto expansionDone
+					}
+					result = append(result, nf)
+					addedSet[nf] = true
+					usedBudget += cost
+				}
+				break
+			}
+		}
+	}
+
+expansionDone:
+	return result
+}
+
+// -----------------------------------------------------------------------------
+// Message Assembly
+// -----------------------------------------------------------------------------
+
+// assembleMessages builds the final message list for the LLM.
+// Includes selected symbol signatures and file paths as context preamble.
+func assembleMessages(query string, symbols []scanner.Symbol, filePaths []string, root string) []history.Message {
+	if len(symbols) == 0 && len(filePaths) == 0 {
+		return []history.Message{{Role: "user", Content: query}}
+	}
+
+	var sb strings.Builder
+	sb.WriteString("## Project Context\n\n")
+
+	if len(symbols) > 0 {
+		sb.WriteString("### Relevant Symbols\n\n")
+		for _, sym := range symbols {
+			sb.WriteString(fmt.Sprintf("- `%s` (%s): %s\n", sym.StableID, sym.Kind, sym.Signature))
+		}
+		sb.WriteString("\n")
+	}
+
+	if len(filePaths) > 0 {
+		sb.WriteString("### Selected Files\n\n")
+		for _, fp := range filePaths {
+			sb.WriteString(fmt.Sprintf("- %s\n", fp))
+		}
+		sb.WriteString("\n")
+	}
+
+	sb.WriteString("## Query\n\n")
+	sb.WriteString(query)
+
+	return []history.Message{{Role: "user", Content: sb.String()}}
+}
+
+// -----------------------------------------------------------------------------
+// Helpers
+// -----------------------------------------------------------------------------
+
+// tokenCount returns the token cost of a string using the project's standard counter.
+func tokenCount(cfg config.Config, content string) int {
+	return history.New(cfg.TokenThreshold, []history.Message{{Role: "user", Content: content}}).TokenCount()
+}
+
+// uniqueFilePaths returns the deduplicated set of file paths from the given symbols.
+func uniqueFilePaths(symbols []scanner.Symbol) []string {
+	seen := make(map[string]bool)
+	var paths []string
+	for _, sym := range symbols {
+		if sym.FilePath != "" && !seen[sym.FilePath] {
+			paths = append(paths, sym.FilePath)
+			seen[sym.FilePath] = true
+		}
+	}
+	return paths
+}
+
+// loadArtifacts reads all four artifact files from root/.myhelper/.
+func loadArtifacts(root string) (
+	proj scanner.ProjectArtifact,
+	pkgs scanner.PackagesArtifact,
+	files scanner.FilesArtifact,
+	syms scanner.SymbolsArtifact,
+	err error,
+) {
+	myhelperDir := filepath.Join(root, ".myhelper")
+	if err = readJSON(filepath.Join(myhelperDir, "project.json"), &proj); err != nil {
+		return
+	}
+	if err = readJSON(filepath.Join(myhelperDir, "packages.json"), &pkgs); err != nil {
+		return
+	}
+	if err = readJSON(filepath.Join(myhelperDir, "files.json"), &files); err != nil {
+		return
+	}
+	if err = readJSON(filepath.Join(myhelperDir, "symbols.json"), &syms); err != nil {
+		return
+	}
+	return
+}
+
+func readJSON(path string, v interface{}) error {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return fmt.Errorf("readJSON %s: %w", path, err)
+	}
+	return json.Unmarshal(data, v)
+}
