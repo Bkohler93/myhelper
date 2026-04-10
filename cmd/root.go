@@ -9,6 +9,7 @@ import (
 )
 
 var tokenLimitFlag int
+var noContextFlag bool
 
 var rootCmd = &cobra.Command{
 	Use:                   "myhelper",
@@ -19,6 +20,7 @@ var rootCmd = &cobra.Command{
 
 func init() {
 	rootCmd.PersistentFlags().IntVar(&tokenLimitFlag, "token-limit", 0, "override token threshold for conversation history (default 4100)")
+	rootCmd.PersistentFlags().BoolVar(&noContextFlag, "no-context", false, "bypass retrieval and inject no project context")
 }
 
 // ApplyFlagOverrides applies any CLI flag overrides to a resolved Config.

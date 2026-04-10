@@ -43,14 +43,22 @@ func runPlan(cmd *cobra.Command, args []string) error {
 	}
 
 	cfg := config.Load()
+	ApplyFlagOverrides(&cfg)
 
 	root, err := os.Getwd()
 	if err != nil {
 		return fmt.Errorf("runPlan: getwd: %w", err)
 	}
-	rctx, err := retrieval.BuildContext(root, input, retrieval.PlanStrategy, cfg, ollama.Chat)
-	if err != nil {
-		return fmt.Errorf("runPlan: BuildContext: %w", err)
+	var rctx retrieval.Context
+	if noContextFlag {
+		rctx = retrieval.Context{
+			Messages: []history.Message{{Role: "user", Content: input}},
+		}
+	} else {
+		rctx, err = retrieval.BuildContext(root, input, retrieval.PlanStrategy, cfg, ollama.Chat)
+		if err != nil {
+			return fmt.Errorf("runPlan: BuildContext: %w", err)
+		}
 	}
 
 	messages := []history.Message{
