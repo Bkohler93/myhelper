@@ -6,6 +6,8 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"os"
+	"path/filepath"
 	"strings"
 )
 
@@ -34,9 +36,54 @@ type searxResult struct {
 	Content string `json:"content"`
 }
 
-// LoadConfig returns a Config with the default endpoint. Full implementation added in Task 3.
+// LoadConfig resolves the SearXNG endpoint with the following precedence (highest to lowest):
+//  1. MYHELPER_SEARCH_ENDPOINT environment variable
+//  2. local .myhelper/config.json (search_endpoint key)
+//  3. ~/.config/myhelper/config.json (search_endpoint key)
+//  4. DefaultSearchEndpoint
 func LoadConfig() Config {
-	return Config{Endpoint: DefaultSearchEndpoint}
+	cfg := Config{Endpoint: DefaultSearchEndpoint}
+
+	if loaded, ok := loadConfigFile(homeConfigPath()); ok {
+		if loaded.Endpoint != "" {
+			cfg.Endpoint = loaded.Endpoint
+		}
+	}
+	if loaded, ok := loadConfigFile(localConfigPath()); ok {
+		if loaded.Endpoint != "" {
+			cfg.Endpoint = loaded.Endpoint
+		}
+	}
+
+	if v := os.Getenv("MYHELPER_SEARCH_ENDPOINT"); v != "" {
+		cfg.Endpoint = v
+	}
+	return cfg
+}
+
+func localConfigPath() string { return ".myhelper/config.json" }
+
+func homeConfigPath() string {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return ""
+	}
+	return filepath.Join(home, ".config", "myhelper", "config.json")
+}
+
+func loadConfigFile(path string) (Config, bool) {
+	if path == "" {
+		return Config{}, false
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return Config{}, false
+	}
+	var c Config
+	if err := json.Unmarshal(data, &c); err != nil {
+		return Config{}, false
+	}
+	return c, true
 }
 
 // Search queries the SearXNG instance at cfg.Endpoint and returns parsed results.
