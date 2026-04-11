@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.3
-milestone_name: Structured Code Intelligence
-status: v1.3 milestone archived
-stopped_at: Milestone complete — archived 2026-04-10
+milestone: v2.0
+milestone_name: GSD Plan Executor
+status: defining requirements
+stopped_at: Milestone v2.0 started — 2026-04-10
 last_updated: "2026-04-10T00:00:00.000Z"
 progress:
-  total_phases: 5
-  completed_phases: 5
-  total_plans: 11
-  completed_plans: 11
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -19,14 +19,15 @@ progress:
 
 See: .planning/PROJECT.md (updated 2026-04-10)
 
-**Core value:** Get a precise, project-aware answer from a local 7B model by enabling it to navigate a structured map of the codebase—without context bloat or external APIs.
-**Current focus:** Planning next milestone — run `/gsd-new-milestone` to define v1.4
+**Core value:** Execute GSD phase plans step-by-step using a local 7B model with targeted retrieval context — no external APIs, no cloud dependency.
+**Current focus:** Defining requirements for v2.0
 
 ## Current Position
 
-Milestone v1.3 Structured Code Intelligence — **COMPLETE AND ARCHIVED**
-
-All 5 phases (9-13), 11 plans shipped. Tag v1.3 created.
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-04-10 — Milestone v2.0 started
 
 ## Performance Metrics
 

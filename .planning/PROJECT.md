@@ -2,7 +2,19 @@
 
 ## What This Is
 
-A Go CLI tool for Go developers that offloads common coding micro-tasks to a locally-hosted LLM (Ollama + qwen2.5-coder:7b). Six focused subcommands — `init`, `sync`, `plan`, `lookup`, `starter`, `pattern`, `inspect` — provide project-aware answers by building and querying a structured, token-budgeted representation of the codebase. Instead of injecting large amounts of raw code, the tool enables the model to navigate a hierarchical index (project → package → file → symbol) and pull only the context it needs through a four-stage retrieval pipeline. All four query commands are interactive multi-turn conversations that automatically compress history when the token threshold is hit. No external API dependencies. v1.3 shipped 2026-04-10.
+A Go CLI tool that acts as a local-model-powered executor for GSD phase plans. Claude/GSD handles research and planning; myhelper reads the structured PLAN.md output and drives a locally-hosted 7B model (Ollama + qwen2.5-coder:7b) through atomic code changes step-by-step. The tool builds targeted retrieval context per task using a hierarchical codebase index, accumulates contracts (exported types/signatures) across sequential tasks to maintain cross-file consistency, generates patches, and verifies each change compiles before moving on. Ad-hoc query commands (`starter`, `lookup`, `pattern`) remain for quick one-off coding questions. No external API dependencies. v2.0 in development.
+
+## Current Milestone: v2.0 GSD Plan Executor
+
+**Goal:** Transform myhelper into a GSD-integrated code executor — reading structured PLAN.md files, injecting targeted retrieval context per task, and driving the local 7B model through atomic code changes step-by-step with patch application and compile verification.
+
+**Target features:**
+- New `execute` command — discovers active phase plan from `.planning/phases/`, presents tasks one by one with confirm gate before applying
+- Sequential contract accumulation — extract newly written exported types/signatures after each task and inject into subsequent task context
+- Patch application — generate unified diff and apply programmatically
+- Compile verification gate — `go build` + `go test` after each applied patch, configurable with `--no-verify`
+- Remove `plan` command — planning delegated to Claude/GSD
+- Keep `starter`, `lookup`, `pattern` as ad-hoc helpers unchanged
 
 ## Core Value
 
@@ -44,10 +56,11 @@ Get a precise, project-aware answer from a local 7B model by enabling it to navi
 
 ### Active
 
-- [ ] Symbol summaries — LLM-generated one-line summary per exported symbol stored in `symbols.json` (SUM-01, SUM-02)
-- [ ] Consume stored `CallEdges`/`TypeRefs` in retrieval — currently stored but not read by pipeline
-- [ ] Eliminate dual context injection — `context.md` + `proj.Summary` both carry project description from same source
-- [ ] Phase 11 VERIFICATION.md — close process gap for RET-01–06
+- [ ] `execute` command — discovers and parses active GSD PLAN.md from `.planning/phases/`, presents tasks step-by-step
+- [ ] Sequential contract accumulation — inject prior task's exported types/signatures into subsequent task retrieval context
+- [ ] Patch generation and application — produce unified diff and apply programmatically per task
+- [ ] Compile verification gate — `go build` + `go test` after each applied patch; `--no-verify` flag to skip
+- [ ] Remove `plan` command — planning delegated to Claude/GSD
 
 ### Out of Scope
 
@@ -114,4 +127,4 @@ This document evolves at milestone boundaries.
 4. Context + architecture update
 
 ---
-*Last updated: 2026-04-10 after v1.3 Structured Code Intelligence milestone*
+*Last updated: 2026-04-10 after v2.0 GSD Plan Executor milestone start*
