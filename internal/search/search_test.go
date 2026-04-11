@@ -138,6 +138,23 @@ func TestSearch_RequestParams(t *testing.T) {
 			t.Errorf("expected q='golang channels', got %q", gotQ)
 		}
 	})
+
+	t.Run("pageno_present", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			pageno := r.URL.Query().Get("pageno")
+			if pageno != "1" {
+				t.Errorf("expected pageno=1, got %q", pageno)
+			}
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(map[string]any{"results": []map[string]string{}})
+		}))
+		defer srv.Close()
+		cfg := search.Config{Endpoint: srv.URL}
+		_, err := search.Search("test", cfg)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+	})
 }
 
 func TestSearch_Errors(t *testing.T) {

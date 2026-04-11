@@ -95,7 +95,7 @@ func Search(query string, cfg Config) ([]Result, error) {
 		endpoint = "http://" + endpoint
 	}
 
-	reqURL := endpoint + "/search?q=" + url.QueryEscape(query) + "&format=json"
+	reqURL := endpoint + "/search?q=" + url.QueryEscape(query) + "&format=json&pageno=1"
 
 	resp, err := http.Get(reqURL)
 	if err != nil {
