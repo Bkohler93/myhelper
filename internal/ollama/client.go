@@ -18,6 +18,7 @@ type chatRequest struct {
 	Model    string            `json:"model"`
 	Messages []history.Message `json:"messages"`
 	Stream   bool              `json:"stream"`
+	Format   json.RawMessage   `json:"format,omitempty"`
 }
 
 type chatMessage struct {
@@ -96,6 +97,44 @@ func Chat(cfg config.Config, messages []history.Message) (string, error) {
 		Model:    cfg.Model,
 		Messages: messages,
 		Stream:   false,
+	}
+
+	data, err := json.Marshal(reqBody)
+	if err != nil {
+		return "", fmt.Errorf("marshal request: %w", err)
+	}
+
+	resp, err := http.Post(url, "application/json", bytes.NewReader(data))
+	if err != nil {
+		return "", fmt.Errorf("POST %s: %w", url, err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return "", fmt.Errorf("ollama returned %d: %s", resp.StatusCode, strings.TrimSpace(string(body)))
+	}
+
+	var res chatResponse
+	if err := json.NewDecoder(resp.Body).Decode(&res); err != nil {
+		return "", fmt.Errorf("decode response: %w", err)
+	}
+	return res.Message.Content, nil
+}
+
+// ChatWithFormat sends a messages array to the Ollama /api/chat endpoint in
+// non-streaming mode with a JSON schema constraint. The schema is passed as
+// json.RawMessage and serialized into the "format" field of the request body.
+// Returns the model's response content as a string. Used for internal pipeline
+// calls requiring structured JSON output. Nothing is written to stdout.
+func ChatWithFormat(cfg config.Config, messages []history.Message, schema json.RawMessage) (string, error) {
+	url := chatURL(cfg.Endpoint)
+
+	reqBody := chatRequest{
+		Model:    cfg.Model,
+		Messages: messages,
+		Stream:   false,
+		Format:   schema,
 	}
 
 	data, err := json.Marshal(reqBody)
