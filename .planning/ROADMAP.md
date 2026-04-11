@@ -87,62 +87,6 @@ Note: Phases 16-18 were not built. Internal packages from v2.0 (planner, scanner
 
 ## Phase Details
 
-### Phase 14: Ollama Client Extension
-**Goal**: The Ollama client can return structured JSON output for internal pipeline calls
-**Depends on**: Nothing (extends existing `internal/ollama`)
-**Requirements**: OLLAMA-01, OLLAMA-02
-**Success Criteria** (what must be TRUE):
-  1. `ChatWithFormat` accepts a JSON schema and returns a parsed response without streaming
-  2. Existing `Chat` and `StreamChat` functions are unchanged and all existing tests pass
-  3. The `chatRequest` struct serializes with `format` omitted when no schema is provided
-**Plans**: 1 plan
-
-Plans:
-- [x] 14-01-PLAN.md — Add Format field to chatRequest struct and implement ChatWithFormat with httptest suite
-
-### Phase 15: Plan Parser
-**Goal**: Active GSD phase plans are parsed from disk into typed structs ready for execution
-**Depends on**: Phase 14
-**Requirements**: PLAN-01, PLAN-02, PLAN-03
-**Success Criteria** (what must be TRUE):
-  1. `internal/planner` parses a GSD PLAN.md file (YAML frontmatter + XML task blocks) into a `Plan` with a slice of `Task` structs
-  2. The active phase directory is discovered automatically from `.planning/phases/` without any argument — finding the highest-numbered directory missing a SUMMARY.md
-  3. A PLAN.md with missing or malformed task fields returns a parse error rather than silently dropping tasks
-**Plans**: 2 plans
-
-Plans:
-- [x] 15-01-PLAN.md — Create internal/planner package: Plan/Task structs, ParsePlan with bufio frontmatter + XML task extraction, TestParsePlan suite
-- [x] 15-02-PLAN.md — Add FindActivePlan directory scanner and TestFindActivePlan suite
-
-### Phase 16: CLI Cleanup
-**Goal**: The binary has no subcommands — `myhelper` is the only entry point and unrecognized subcommands are gone
-**Depends on**: Nothing (standalone surgery on cmd/)
-**Requirements**: CLEANUP-01
-**Success Criteria** (what must be TRUE):
-  1. Running `myhelper starter`, `myhelper plan`, `myhelper lookup`, `myhelper pattern`, `myhelper inspect`, `myhelper init`, or `myhelper sync` returns an "unknown command" error
-  2. `go build ./...` passes with no errors after removal
-  3. All existing tests in internal packages (ollama, history, planner, scanner, retrieval) continue to pass
-**Plans**: 1 plan
-
-Plans:
-- [x] 16-01-PLAN.md — Delete 7 subcommand files, tui.go, coupled tests; trim root.go and helpers.go; run go mod tidy
-
-### Phase 17: Chat Entry Point
-**Goal**: Users can chat with the local Ollama model by running `myhelper` or `myhelper "question"` with no other setup
-**Depends on**: Phase 16
-**Requirements**: CHAT-01, CHAT-02, CHAT-03, CHAT-04, CHAT-05, CHAT-06
-**Success Criteria** (what must be TRUE):
-  1. `myhelper` with no arguments starts an interactive REPL — user types a question, model streams a response, session continues until "quit" or Ctrl+C
-  2. `myhelper "what is a mutex?"` streams a response to stdout and exits with code 0
-  3. In a REPL session, a follow-up question receives a response that reflects the prior exchange (history is maintained across turns)
-  4. No system prompt is sent — the model receives only the user's messages and accumulated history
-  5. When history exceeds the token threshold, the session automatically summarizes silently and continues without interruption
-  6. Endpoint and model are picked up from `MYHELPER_ENDPOINT` / `MYHELPER_MODEL` env vars or `.myhelper/config.json` without any code changes
-**Plans**: 1 plan
-
-Plans:
-- [x] 17-01-PLAN.md — Wave 0 test stubs + rewrite summarize for no-system-prompt + wire root.go as REPL/one-shot entry point
-
 ### Phase 18: SearXNG Client
 **Goal**: A standalone `internal/search/` package can query a SearXNG instance and return structured results ready for downstream consumption
 **Depends on**: Phase 17
