@@ -11,7 +11,7 @@ import (
 	"github.com/bkohler93/myhelper/internal/search"
 )
 
-const searchGatePrompt = `Answer only "yes" or "no". Does answering the following query require current or real-time information from the internet? Query: `
+const searchGatePrompt = `Answer only "yes" or "no". Would the following query benefit from retrieving current or real-time information from the internet? Query: `
 
 // searchGate returns true if the query needs web search.
 // Fails CLOSED: returns false on any LLM error (GATE-02).
