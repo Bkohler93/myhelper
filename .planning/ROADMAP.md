@@ -96,7 +96,9 @@ Note: Phases 16-18 were not built. Internal packages from v2.0 (planner, scanner
   2. The SearXNG endpoint is resolved from `MYHELPER_SEARCH_ENDPOINT` env var, then `.myhelper/config.json`, then `~/.config/myhelper/config.json`, defaulting to `http://192.168.0.9:8083`
   3. A network error or non-200 HTTP response returns an error from `Search` — the caller receives the error and the result slice is nil
   4. A successful call requests 8–10 results from SearXNG's `/search?q=...&format=json` endpoint (observable via request parameters in tests)
-**Plans**: TBD
+**Plans**: 1 plan
+Plans:
+- [ ] 18-01-PLAN.md — Build internal/search package: Config, LoadConfig(), Result, Search() with httptest-based unit tests
 
 ### Phase 19: Search Gate & Injection
 **Goal**: The chat path automatically fetches and injects web search results when the query needs current information, with user flags to override
@@ -109,7 +111,9 @@ Note: Phases 16-18 were not built. Internal packages from v2.0 (planner, scanner
   4. Running `myhelper --no-search "what is the latest Go release?"` suppresses search even though the gate would have returned true
   5. When search is triggered, the injected message block is clearly delimited (e.g., `[WEB RESULTS]`), contains title and URL alongside each snippet, and fits within the configured token limit
   6. If the re-rank LLM call fails or returns no valid indices, the model still responds — either using all fetched results (re-rank error) or from its own knowledge (zero relevant results)
-**Plans**: TBD
+**Plans**: 1 plan
+Plans:
+- [ ] 18-01-PLAN.md — Build internal/search package: Config, LoadConfig(), Result, Search() with httptest-based unit tests
 
 ## Progress
 
