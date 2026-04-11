@@ -73,7 +73,7 @@ Note: Phases 16-18 were not built. Internal packages from v2.0 (planner, scanner
 
 **Milestone Goal:** Strip myhelper down to a language-agnostic interactive chat interface over the local Ollama model — fast, minimal, useful for any quick question.
 
-- [ ] **Phase 16: CLI Cleanup** - Remove all subcommands from the cobra tree, leaving root command as sole entry point
+- [x] **Phase 16: CLI Cleanup** - Remove all subcommands from the cobra tree, leaving root command as sole entry point (completed 2026-04-11)
 - [ ] **Phase 17: Chat Entry Point** - Wire root command as multi-turn REPL and one-shot responder with history summarization
 
 ## Phase Details
@@ -116,7 +116,7 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 16-01-PLAN.md — Delete 7 subcommand files, tui.go, coupled tests; trim root.go and helpers.go; run go mod tidy
+- [x] 16-01-PLAN.md — Delete 7 subcommand files, tui.go, coupled tests; trim root.go and helpers.go; run go mod tidy
 
 ### Phase 17: Chat Entry Point
 **Goal**: Users can chat with the local Ollama model by running `myhelper` or `myhelper "question"` with no other setup
@@ -129,7 +129,10 @@ Plans:
   4. No system prompt is sent — the model receives only the user's messages and accumulated history
   5. When history exceeds the token threshold, the session automatically summarizes silently and continues without interruption
   6. Endpoint and model are picked up from `MYHELPER_ENDPOINT` / `MYHELPER_MODEL` env vars or `.myhelper/config.json` without any code changes
-**Plans**: TBD
+**Plans**: 1 plan
+
+Plans:
+- [ ] 17-01-PLAN.md — Wave 0 test stubs + rewrite summarize for no-system-prompt + wire root.go as REPL/one-shot entry point
 
 ## Progress
 
@@ -150,5 +153,5 @@ Plans:
 | 13. Commands & Flags | v1.3 | 3/3 | Complete | 2026-04-10 |
 | 14. Ollama Client Extension | v2.0 | 1/1 | Complete | 2026-04-11 |
 | 15. Plan Parser | v2.0 | 2/2 | Complete | 2026-04-11 |
-| 16. CLI Cleanup | v3.0 | 0/? | Not started | - |
-| 17. Chat Entry Point | v3.0 | 0/? | Not started | - |
+| 16. CLI Cleanup | v3.0 | 1/1 | Complete   | 2026-04-11 |
+| 17. Chat Entry Point | v3.0 | 0/1 | Not started | - |
