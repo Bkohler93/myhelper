@@ -59,7 +59,7 @@ Full archive: `.planning/milestones/v1.3-ROADMAP.md`
 
 **Milestone Goal:** Transform myhelper into a GSD-integrated code executor — reading structured PLAN.md files, injecting targeted retrieval context per task, and driving the local 7B model through atomic code changes step-by-step with patch application and compile verification.
 
-- [ ] **Phase 14: Ollama Client Extension** - Add structured JSON output support to the Ollama client
+- [x] **Phase 14: Ollama Client Extension** - Add structured JSON output support to the Ollama client (completed 2026-04-11)
 - [ ] **Phase 15: Plan Parser** - Parse GSD PLAN.md files and auto-discover the active phase plan
 - [ ] **Phase 16: Contract Extractor** - Extract and accumulate exported contracts across sequential tasks
 - [ ] **Phase 17: Patch & Verify** - Generate display diffs, apply file writes, and verify compilation
@@ -78,7 +78,7 @@ Full archive: `.planning/milestones/v1.3-ROADMAP.md`
 **Plans**: 1 plan
 
 Plans:
-- [ ] 14-01-PLAN.md — Add Format field to chatRequest struct and implement ChatWithFormat with httptest suite
+- [x] 14-01-PLAN.md — Add Format field to chatRequest struct and implement ChatWithFormat with httptest suite
 
 ### Phase 15: Plan Parser
 **Goal**: Active GSD phase plans are parsed from disk into typed structs ready for execution
@@ -88,7 +88,11 @@ Plans:
   1. `internal/planner` parses a GSD PLAN.md file (YAML frontmatter + XML task blocks) into a `Plan` with a slice of `Task` structs
   2. The active phase directory is discovered automatically from `.planning/phases/` without any argument — finding the highest-numbered directory missing a SUMMARY.md
   3. A PLAN.md with missing or malformed task fields returns a parse error rather than silently dropping tasks
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 15-01-PLAN.md — Create internal/planner package: Plan/Task structs, ParsePlan with bufio frontmatter + XML task extraction, TestParsePlan suite
+- [ ] 15-02-PLAN.md — Add FindActivePlan directory scanner and TestFindActivePlan suite
 
 ### Phase 16: Contract Extractor
 **Goal**: Exported types and signatures accumulate across tasks and are available for injection into subsequent task context
@@ -142,8 +146,8 @@ Plans:
 | 11. Retrieval Package | v1.3 | 1/1 | Complete | 2026-04-10 |
 | 12. Adaptive Context Builder & Strategies | v1.3 | 3/3 | Complete | 2026-04-10 |
 | 13. Commands & Flags | v1.3 | 3/3 | Complete | 2026-04-10 |
-| 14. Ollama Client Extension | v2.0 | 0/1 | Not started | - |
-| 15. Plan Parser | v2.0 | 0/? | Not started | - |
+| 14. Ollama Client Extension | v2.0 | 1/1 | Complete    | 2026-04-11 |
+| 15. Plan Parser | v2.0 | 0/2 | Not started | - |
 | 16. Contract Extractor | v2.0 | 0/? | Not started | - |
 | 17. Patch & Verify | v2.0 | 0/? | Not started | - |
 | 18. Execute Command | v2.0 | 0/? | Not started | - |
