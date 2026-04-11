@@ -26,6 +26,9 @@ var emptyHistoryErr = errors.New("cannot initiate conversation with empty histor
 // Used for re-condensation detection and summary message construction.
 const summaryPrefix = "Summary of previous conversation:"
 
+const summarizePrompt = "Summarize the conversation above as a brief paragraph, preserving key facts and questions."
+const recondensePrompt = "The conversation already contains a summary. Produce an updated, condensed summary that incorporates the new exchanges."
+
 func initiateConversation(cfg config.Config, hist *history.History, streamFn func(config.Config, []history.Message) (string, error)) error {
 	if len(hist.Messages()) == 0 {
 		return emptyHistoryErr
@@ -131,35 +134,31 @@ func runConversationLoop(
 }
 
 // summarize compresses history when the token threshold is exceeded.
-// It detects re-condensation by checking for an existing summary message.
-// The system message at index [0] is always preserved.
+// It operates on no-system-prompt history: msgs[0] is always a user message.
 //
-// Per D-06: re-condensation detected by "Summary of previous conversation:" prefix.
-// Per D-09: if len(msgs) < 5, nothing meaningful to compress; returns nil.
+// Per CHAT-04: no system prompt at index 0.
+// Per CHAT-05: minimum 4 messages required ([u,a,u,a]) — last pair kept verbatim.
+// Per D-06: re-condensation detected by summaryPrefix in any system-role message.
 func summarize(cfg config.Config, hist *history.History, summarizePrompt, recondensePrompt string) error {
 	msgs := hist.Messages()
-	// msgs[0] is the system prompt — never summarized.
-	// The last two messages are the most recent user+assistant exchange — kept verbatim.
-	// Everything between [1] and [len-3] (inclusive) is the candidate for summarization.
 
-	// Detect re-condensation: is there already a summary message in the slice?
+	// Need at least [user, assistant, user, assistant] = 4 messages.
+	// With only 3 or fewer there is nothing to compress separately from the final pair.
+	if len(msgs) < 4 {
+		return nil
+	}
+
+	finalPair := msgs[len(msgs)-2:]     // last user + last assistant kept verbatim
+	candidates := msgs[0 : len(msgs)-2] // everything before final pair (no system msg to skip)
+
+	// Detect re-condensation: scan ALL messages for an existing summary.
 	prompt := summarizePrompt
-	for _, m := range msgs[1:] {
+	for _, m := range msgs {
 		if m.Role == "system" && strings.HasPrefix(m.Content, summaryPrefix) {
 			prompt = recondensePrompt
 			break
 		}
 	}
-
-	// Safe to summarize only if there are at least 5 messages (system + ≥1 exchange before final pair).
-	// If only [system, user, assistant] exist (3 messages), there is nothing to compress separately
-	// from the final exchange — return nil.
-	if len(msgs) < 5 {
-		return nil
-	}
-
-	finalPair := msgs[len(msgs)-2:] // last user + last assistant
-	candidates := msgs[1 : len(msgs)-2] // everything between system and final pair
 
 	summarizeMessages := make([]history.Message, 0, len(candidates)+1)
 	summarizeMessages = append(summarizeMessages, candidates...)
@@ -170,8 +169,7 @@ func summarize(cfg config.Config, hist *history.History, summarizePrompt, recond
 		return fmt.Errorf("summarize: %w", err)
 	}
 
-	newMessages := make([]history.Message, 0, 4)
-	newMessages = append(newMessages, msgs[0]) // original system message
+	newMessages := make([]history.Message, 0, 3)
 	newMessages = append(newMessages, history.Message{
 		Role:    "system",
 		Content: summaryPrefix + " " + summaryText,

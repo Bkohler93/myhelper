@@ -162,7 +162,6 @@ func TestRunConversationLoop_Summarization(t *testing.T) {
 		fs := &fakeStream{responses: []string{"response1"}}
 		// Threshold very high — never triggers
 		hist := history.New(999999, []history.Message{
-			{Role: "system", Content: "system prompt"},
 			{Role: "user", Content: "initial question"},
 			{Role: "assistant", Content: "initial answer"},
 		})
