@@ -14,7 +14,7 @@ import (
 const searchGatePrompt = `Answer only "yes" or "no". Would the following query benefit from retrieving current or real-time information from the internet? Query: `
 
 // searchGate returns true if the query needs web search.
-// Fails CLOSED: returns false on any LLM error (GATE-02).
+// fails open (search skipped on error) — GATE-02.
 func searchGate(query string, cfg config.Config) bool {
 	messages := []history.Message{
 		{Role: "user", Content: searchGatePrompt + query},

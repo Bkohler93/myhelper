@@ -155,6 +155,26 @@ func TestSearch_RequestParams(t *testing.T) {
 			t.Fatalf("unexpected error: %v", err)
 		}
 	})
+
+	t.Run("result_count_present", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			numResults := r.URL.Query().Get("num_results")
+			if numResults == "" {
+				t.Errorf("expected num_results param in request URL, got empty")
+			}
+			if numResults != "10" {
+				t.Errorf("expected num_results=10, got %q", numResults)
+			}
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(map[string]any{"results": []map[string]string{}})
+		}))
+		defer srv.Close()
+		cfg := search.Config{Endpoint: srv.URL}
+		_, err := search.Search("test", cfg)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+	})
 }
 
 func TestSearch_Errors(t *testing.T) {
