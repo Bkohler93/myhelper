@@ -83,7 +83,7 @@ Note: Phases 16-18 were not built. Internal packages from v2.0 (planner, scanner
 **Milestone Goal:** Add internet search capability to the chat path via SearXNG, with an automatic detection gate and LLM-filtered result injection.
 
 - [x] **Phase 18: SearXNG Client** - Build `internal/search/` package with configurable endpoint, structured results, and clean error handling (1/1 plan) — completed 2026-04-11
-- [ ] **Phase 19: Search Gate & Injection** - Auto-detect gate, LLM re-rank pass, token-budget-aware context injection, and `--search`/`--no-search` flags
+- [x] **Phase 19: Search Gate & Injection** - Auto-detect gate, LLM re-rank pass, token-budget-aware context injection, and `--search`/`--no-search` flags (2/2 plans) — completed 2026-04-11
 
 ## Phase Details
 

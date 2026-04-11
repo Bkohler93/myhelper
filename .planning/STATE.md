@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v3.1
 milestone_name: Web Search
-status: executing
-stopped_at: Phase 18 complete — Phase 19 next
+status: complete
+stopped_at: v3.1 complete — all phases done (18-19)
 last_updated: "2026-04-11T00:00:00.000Z"
 progress:
   total_phases: 2
-  completed_phases: 1
-  total_plans: 1
-  completed_plans: 1
-  percent: 50
+  completed_phases: 2
+  total_plans: 3
+  completed_plans: 3
+  percent: 100
 ---
 
 # Project State
@@ -20,21 +20,21 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-10)
 
 **Core value:** Fast, language-agnostic chat with a local 7B model — ask anything, get an answer, with optional web search for current information.
-**Current focus:** v3.1 Web Search — Phase 18 complete, Phase 19 next
+**Current focus:** v3.1 Web Search — COMPLETE
 
 ## Current Position
 
-Phase: 19 (not started)
+Phase: — (all phases complete)
 Plan: —
-Status: Phase 18 verified — internal/search package complete
-Last activity: 2026-04-11 — Phase 18 complete (SearXNG client, 1 plan)
+Status: v3.1 milestone complete — SearXNG client + search gate + injection shipped
+Last activity: 2026-04-11 — Phase 19 complete (search gate & injection, 2 plans)
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 38 (across v1.0, v1.1, v1.2, v1.3, v3.1)
-- v3.1: 1 plan across 1 phase
+- Total plans completed: 40 (across v1.0, v1.1, v1.2, v1.3, v3.1)
+- v3.1: 3 plans across 2 phases
 
 **By Phase:**
 
@@ -54,6 +54,7 @@ Last activity: 2026-04-11 — Phase 18 complete (SearXNG client, 1 plan)
 | v1.3 Phase 12 | 3 | Complete |
 | v1.3 Phase 13 | 3 | Complete |
 | v3.1 Phase 18 | 1 | Complete |
+| v3.1 Phase 19 | 2 | Complete |
 
 ## Accumulated Context
 
@@ -78,5 +79,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-04-11
-Stopped at: Phase 18 complete — Phase 19 (Search Gate & Injection) is next
-Resume: `/gsd-execute-phase 19` after planning, or `/gsd-plan-phase 19` to begin
+Stopped at: v3.1 milestone complete — all phases shipped
+Resume: `/gsd-complete-milestone` to archive v3.1 and prepare v3.2
