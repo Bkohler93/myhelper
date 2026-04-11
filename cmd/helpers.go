@@ -70,7 +70,25 @@ func runConversationLoop(
 	signal.Notify(sigCh, syscall.SIGINT)
 	defer signal.Stop(sigCh)
 
+	// Launch a single scanner goroutine outside the loop to avoid per-iteration
+	// goroutine allocation (WR-03). The goroutine feeds all lines into resultCh
+	// and sends a final zero-value entry on EOF/error.
+	// Note: when SIGINT is received and the function returns, this goroutine
+	// will remain blocked on the underlying io.Reader until the reader is closed.
+	// For os.Stdin this is unavoidable without OS-level plumbing; the goroutine
+	// lifetime is bounded by the process lifetime (WR-02).
+	type scanResult struct {
+		text string
+		ok   bool
+	}
 	scanner := bufio.NewScanner(stdinReader)
+	resultCh := make(chan scanResult, 1)
+	go func() {
+		for scanner.Scan() {
+			resultCh <- scanResult{text: scanner.Text(), ok: true}
+		}
+		resultCh <- scanResult{ok: false}
+	}()
 
 	for {
 		// Check for SIGINT before blocking on input.
@@ -92,17 +110,6 @@ func runConversationLoop(
 		}
 
 		fmt.Fprint(os.Stderr, "> ") // per D-01
-
-		// Scan in a goroutine so SIGINT can interrupt the blocking call.
-		type scanResult struct {
-			text string
-			ok   bool
-		}
-		resultCh := make(chan scanResult, 1)
-		go func() {
-			ok := scanner.Scan()
-			resultCh <- scanResult{text: scanner.Text(), ok: ok}
-		}()
 
 		var result scanResult
 		select {
