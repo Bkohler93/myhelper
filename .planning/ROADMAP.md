@@ -98,7 +98,7 @@ Note: Phases 16-18 were not built. Internal packages from v2.0 (planner, scanner
   4. A successful call requests 8–10 results from SearXNG's `/search?q=...&format=json` endpoint (observable via request parameters in tests)
 **Plans**: 1 plan
 Plans:
-- [ ] 18-01-PLAN.md — Build internal/search package: Config, LoadConfig(), Result, Search() with httptest-based unit tests
+- [x] 18-01-PLAN.md — Build internal/search package: Config, LoadConfig(), Result, Search() with httptest-based unit tests
 
 ### Phase 19: Search Gate & Injection
 **Goal**: The chat path automatically fetches and injects web search results when the query needs current information, with user flags to override
@@ -111,9 +111,10 @@ Plans:
   4. Running `myhelper --no-search "what is the latest Go release?"` suppresses search even though the gate would have returned true
   5. When search is triggered, the injected message block is clearly delimited (e.g., `[WEB RESULTS]`), contains title and URL alongside each snippet, and fits within the configured token limit
   6. If the re-rank LLM call fails or returns no valid indices, the model still responds — either using all fetched results (re-rank error) or from its own knowledge (zero relevant results)
-**Plans**: 1 plan
+**Plans**: 2 plans
 Plans:
-- [ ] 18-01-PLAN.md — Build internal/search package: Config, LoadConfig(), Result, Search() with httptest-based unit tests
+- [ ] 19-01-PLAN.md — TDD: test stubs (Wave 0) + searchGate, reRankResults, filterByIndices, buildWebBlock, countTokens in cmd/search.go
+- [ ] 19-02-PLAN.md — Wire: buildUserMessage orchestrator + --search/--no-search flags + runConversationLoop preprocessor param
 
 ## Progress
 
@@ -136,5 +137,5 @@ Plans:
 | 15. Plan Parser | v2.0 | 2/2 | Complete | 2026-04-11 |
 | 16. CLI Cleanup | v3.0 | 1/1 | Complete | 2026-04-11 |
 | 17. Chat Entry Point | v3.0 | 1/1 | Complete | 2026-04-11 |
-| 18. SearXNG Client | v3.1 | 0/? | Not started | - |
-| 19. Search Gate & Injection | v3.1 | 0/? | Not started | - |
+| 18. SearXNG Client | v3.1 | 1/1 | Complete | 2026-04-11 |
+| 19. Search Gate & Injection | v3.1 | 0/2 | Not started | - |
