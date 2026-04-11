@@ -2,18 +2,14 @@ package cmd
 
 import (
 	"bytes"
-	"encoding/json"
-	"errors"
 	"io"
 	"os"
-	"path/filepath"
 	"syscall"
 	"testing"
 	"time"
 
 	"github.com/bkohler93/myhelper/internal/config"
 	"github.com/bkohler93/myhelper/internal/history"
-	"github.com/bkohler93/myhelper/internal/scanner"
 )
 
 // fakeStream records calls and returns a canned response.
@@ -160,34 +156,6 @@ func TestRunConversationLoop(t *testing.T) {
 	})
 }
 
-// writeIndexFile is a test helper that writes a scanner.Index to root/.myhelper/index.json.
-func writeIndexFile(t *testing.T, root string, idx scanner.Index) {
-	t.Helper()
-	myhelperDir := filepath.Join(root, ".myhelper")
-	if err := os.MkdirAll(myhelperDir, 0755); err != nil {
-		t.Fatalf("writeIndexFile: mkdir: %v", err)
-	}
-	data, err := json.Marshal(idx)
-	if err != nil {
-		t.Fatalf("writeIndexFile: marshal: %v", err)
-	}
-	if err := os.WriteFile(filepath.Join(myhelperDir, "index.json"), data, 0644); err != nil {
-		t.Fatalf("writeIndexFile: write: %v", err)
-	}
-}
-
-// writeSummaryFile is a test helper that writes content to root/.myhelper/summaries/<name>.md.
-func writeSummaryFile(t *testing.T, root, name, content string) {
-	t.Helper()
-	dir := filepath.Join(root, ".myhelper", "summaries")
-	if err := os.MkdirAll(dir, 0755); err != nil {
-		t.Fatalf("writeSummaryFile: mkdir: %v", err)
-	}
-	if err := os.WriteFile(filepath.Join(dir, name+".md"), []byte(content), 0644); err != nil {
-		t.Fatalf("writeSummaryFile: write: %v", err)
-	}
-}
-
 // TestRunConversationLoop_Summarization covers summarization behavior.
 func TestRunConversationLoop_Summarization(t *testing.T) {
 	t.Run("does not summarize when history is within limit", func(t *testing.T) {
@@ -237,40 +205,4 @@ func TestMicroPassMigration(t *testing.T) {
 	if bytes.Contains(data, []byte("microPassRe")) {
 		t.Error("helpers.go must not contain microPassRe (CTX-04: deleted in Phase 12.03)")
 	}
-}
-
-// TestReadIndexFile_StaleFlatIndex verifies that readIndexFile returns
-// scanner.ErrStaleFlatIndex when project.json exists, and os.ErrNotExist
-// when no artifact or index files are present.
-func TestReadIndexFile_StaleFlatIndex(t *testing.T) {
-	t.Run("returns_stale_error_when_project_json_exists", func(t *testing.T) {
-		tmpDir := t.TempDir()
-		if err := os.MkdirAll(filepath.Join(tmpDir, ".myhelper"), 0755); err != nil {
-			t.Fatal(err)
-		}
-		// Write minimal project.json
-		if err := os.WriteFile(filepath.Join(tmpDir, ".myhelper", "project.json"),
-			[]byte(`{"schemaVersion":"1.0"}`), 0644); err != nil {
-			t.Fatal(err)
-		}
-		_, err := readIndexFile(tmpDir)
-		if err == nil {
-			t.Fatal("expected error, got nil")
-		}
-		if !errors.Is(err, scanner.ErrStaleFlatIndex) {
-			t.Fatalf("expected ErrStaleFlatIndex, got %v", err)
-		}
-	})
-
-	t.Run("returns_not_exist_when_no_files", func(t *testing.T) {
-		tmpDir := t.TempDir()
-		// No .myhelper directory at all
-		_, err := readIndexFile(tmpDir)
-		if err == nil {
-			t.Fatal("expected error, got nil")
-		}
-		if errors.Is(err, scanner.ErrStaleFlatIndex) {
-			t.Fatalf("did not expect ErrStaleFlatIndex for missing index.json, got %v", err)
-		}
-	})
 }

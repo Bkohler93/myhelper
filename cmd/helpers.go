@@ -2,68 +2,23 @@ package cmd
 
 import (
 	"bufio"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"log"
 	"os"
 	"os/signal"
-	"path/filepath"
 	"strings"
 	"syscall"
-	"time"
 
 	"github.com/bkohler93/myhelper/internal/config"
 	"github.com/bkohler93/myhelper/internal/history"
 	"github.com/bkohler93/myhelper/internal/ollama"
-	"github.com/bkohler93/myhelper/internal/scanner"
 )
 
 // stdinReader is the source of input for the conversation loop.
 // In production this is os.Stdin; tests replace it with a pipe.
 var stdinReader io.Reader = os.Stdin
-
-// readInteractive prints a prompt to stderr and reads a line from stdin.
-// Used when the user omits the positional argument.
-func readInteractive(prompt string) (string, error) {
-	fmt.Fprint(os.Stderr, prompt)
-	scanner := bufio.NewScanner(stdinReader)
-	if !scanner.Scan() {
-		if err := scanner.Err(); err != nil {
-			return "", fmt.Errorf("read input: %w", err)
-		}
-		return "", fmt.Errorf("no input provided")
-	}
-	input := strings.TrimSpace(scanner.Text())
-	if input == "" {
-		return "", fmt.Errorf("input cannot be empty")
-	}
-	return input, nil
-}
-
-// buildSystemMessage composes the system message content from optional project
-// context and the command-specific system prompt. In the /api/chat model,
-// this becomes the Content field of the system message at messages[0].
-func buildSystemMessage(projectContext, systemPrompt string) string {
-	var sb strings.Builder
-	if projectContext != "" {
-		sb.WriteString("Project context:\n")
-		sb.WriteString(projectContext)
-		sb.WriteString("\n\n")
-	}
-	sb.WriteString(systemPrompt)
-	return sb.String()
-}
-
-// resolveInput returns the first positional arg if provided, otherwise
-// prompts the user interactively on stderr.
-func resolveInput(args []string, interactivePrompt string) (string, error) {
-	if len(args) > 0 && strings.TrimSpace(args[0]) != "" {
-		return strings.TrimSpace(args[0]), nil
-	}
-	return readInteractive(interactivePrompt)
-}
 
 var emptyHistoryErr = errors.New("cannot initiate conversation with empty history")
 
@@ -224,107 +179,4 @@ func summarize(cfg config.Config, hist *history.History, summarizePrompt, recond
 	newMessages = append(newMessages, finalPair...)
 	hist.Replace(newMessages)
 	return nil
-}
-
-// syncMeta is written to .myhelper/meta.json after every successful init or sync.
-type syncMeta struct {
-	LastSync time.Time `json:"last_sync"`
-}
-
-// generateContextMD reads per-package summaries from .myhelper/summaries/,
-// synthesizes them into a human-readable project overview via chatFn, and
-// writes the result to .myhelper/context.md.
-// ChatFn is injected for testability (per D-09).
-func generateContextMD(root string, cfg config.Config, chatFn scanner.ChatFn) error {
-	summariesDir := filepath.Join(root, ".myhelper", "summaries")
-	entries, err := os.ReadDir(summariesDir)
-	if err != nil {
-		return fmt.Errorf("generateContextMD: read summaries dir: %w", err)
-	}
-
-	var sb strings.Builder
-	sb.WriteString("Below are per-package summaries for a Go project. ")
-	sb.WriteString("Write a concise, human-readable project overview in markdown. ")
-	sb.WriteString("Describe what the project does, its key packages, and how they relate. ")
-	sb.WriteString("Be brief — under 300 words. Format as clean markdown prose, not a symbol list.\n\n")
-
-	summaryCount := 0
-	for _, e := range entries {
-		if e.IsDir() || !strings.HasSuffix(e.Name(), ".md") {
-			continue
-		}
-		data, err := os.ReadFile(filepath.Join(summariesDir, e.Name()))
-		if err != nil {
-			return fmt.Errorf("generateContextMD: read %s: %w", e.Name(), err)
-		}
-		sb.WriteString("### " + strings.TrimSuffix(e.Name(), ".md") + "\n")
-		sb.WriteString(string(data) + "\n\n")
-		summaryCount++
-	}
-
-	if summaryCount == 0 {
-		return fmt.Errorf("generateContextMD: no summaries found in %s — run init first", summariesDir)
-	}
-
-	messages := []history.Message{
-		{Role: "user", Content: sb.String()},
-	}
-	content, err := chatFn(cfg, messages)
-	if err != nil {
-		return fmt.Errorf("generateContextMD: chatFn: %w", err)
-	}
-
-	outPath := filepath.Join(root, ".myhelper", "context.md")
-	return os.WriteFile(outPath, []byte(content), 0644)
-}
-
-// readLastSync reads the stored last_sync timestamp from .myhelper/meta.json.
-// Returns time.Time{} (zero value) if the file does not exist — callers treat
-// zero as "never synced" (all files are considered changed).
-func readLastSync(root string) (time.Time, error) {
-	path := filepath.Join(root, ".myhelper", "meta.json")
-	data, err := os.ReadFile(path)
-	if os.IsNotExist(err) {
-		return time.Time{}, nil
-	}
-	if err != nil {
-		return time.Time{}, fmt.Errorf("readLastSync: %w", err)
-	}
-	var m syncMeta
-	if err := json.Unmarshal(data, &m); err != nil {
-		return time.Time{}, fmt.Errorf("readLastSync: unmarshal: %w", err)
-	}
-	return m.LastSync, nil
-}
-
-// readIndexFile reads and unmarshals .myhelper/index.json from root.
-// Returns os.ErrNotExist-wrapped error if the file does not exist.
-// Returns scanner.ErrStaleFlatIndex if the new artifact files are present
-// (project.json exists), signaling callers to use artifact files instead.
-func readIndexFile(root string) (scanner.Index, error) {
-	// If new artifact files exist, the flat index.json is stale.
-	if _, statErr := os.Stat(filepath.Join(root, ".myhelper", "project.json")); statErr == nil {
-		return scanner.Index{}, scanner.ErrStaleFlatIndex
-	}
-	path := filepath.Join(root, ".myhelper", "index.json")
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return scanner.Index{}, err
-	}
-	var idx scanner.Index
-	if err := json.Unmarshal(data, &idx); err != nil {
-		return scanner.Index{}, fmt.Errorf("readIndexFile: unmarshal: %w", err)
-	}
-	return idx, nil
-}
-
-// writeLastSync writes t as the last_sync timestamp to .myhelper/meta.json.
-// Called after every successful init or sync (per D-05).
-func writeLastSync(root string, t time.Time) error {
-	path := filepath.Join(root, ".myhelper", "meta.json")
-	data, err := json.Marshal(syncMeta{LastSync: t})
-	if err != nil {
-		return fmt.Errorf("writeLastSync: marshal: %w", err)
-	}
-	return os.WriteFile(path, data, 0644)
 }
