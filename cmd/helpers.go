@@ -81,7 +81,10 @@ func runConversationLoop(
 		}
 
 		// Summarize history if token threshold exceeded (per D-07, D-08).
-		if hist.ExceedsLimit() {
+		// Guard: summarize requires >= 4 messages; skip if too few to avoid
+		// an infinite busy-loop where ExceedsLimit stays true but summarize
+		// is a no-op.
+		if hist.ExceedsLimit() && len(hist.Messages()) >= 4 {
 			fmt.Fprint(os.Stderr, "[Condensing history...]\n")
 			if err := summarize(cfg, hist, summarizePrompt, recondensePrompt); err != nil {
 				return err
