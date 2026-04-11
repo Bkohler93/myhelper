@@ -6,7 +6,8 @@
 - ✅ **v1.1 Conversational Mode** — Phases 2-4 (shipped 2026-04-08)
 - ✅ **v1.2 Smart Context** — Phases 5-8 (shipped 2026-04-08)
 - ✅ **v1.3 Structured Code Intelligence** — Phases 9-13 (shipped 2026-04-10)
-- 🚧 **v2.0 GSD Plan Executor** — Phases 14-18 (in progress)
+- ✅ **v2.0 GSD Plan Executor** — Phases 14-15 (partial; abandoned 2026-04-10)
+- 🚧 **v3.0 Simple Chat Wrapper** — Phases 16-17 (in progress)
 
 ## Phases
 
@@ -55,15 +56,25 @@ Full archive: `.planning/milestones/v1.3-ROADMAP.md`
 
 </details>
 
-### 🚧 v2.0 GSD Plan Executor (In Progress)
+<details>
+<summary>✅ v2.0 GSD Plan Executor (Phases 14-15) — PARTIAL / ABANDONED 2026-04-10</summary>
 
-**Milestone Goal:** Transform myhelper into a GSD-integrated code executor — reading structured PLAN.md files, injecting targeted retrieval context per task, and driving the local 7B model through atomic code changes step-by-step with patch application and compile verification.
+- [x] Phase 14: Ollama Client Extension (1/1 plan) — completed 2026-04-11
+- [x] Phase 15: Plan Parser (2/2 plans) — completed 2026-04-11
+- [-] Phase 16: Contract Extractor — abandoned (never started)
+- [-] Phase 17: Patch & Verify — abandoned (never started)
+- [-] Phase 18: Execute Command — abandoned (never started)
 
-- [x] **Phase 14: Ollama Client Extension** - Add structured JSON output support to the Ollama client (completed 2026-04-11)
-- [ ] **Phase 15: Plan Parser** - Parse GSD PLAN.md files and auto-discover the active phase plan
-- [ ] **Phase 16: Contract Extractor** - Extract and accumulate exported contracts across sequential tasks
-- [ ] **Phase 17: Patch & Verify** - Generate display diffs, apply file writes, and verify compilation
-- [ ] **Phase 18: Execute Command** - Integrate all prior phases into the `execute` command; remove `plan`
+Note: Phases 16-18 were not built. Internal packages from v2.0 (planner, scanner, retrieval) remain in the codebase but are not wired to any CLI commands in v3.0. Phase numbering for v3.0 continues at 16.
+
+</details>
+
+### 🚧 v3.0 Simple Chat Wrapper (In Progress)
+
+**Milestone Goal:** Strip myhelper down to a language-agnostic interactive chat interface over the local Ollama model — fast, minimal, useful for any quick question.
+
+- [ ] **Phase 16: CLI Cleanup** - Remove all subcommands from the cobra tree, leaving root command as sole entry point
+- [ ] **Phase 17: Chat Entry Point** - Wire root command as multi-turn REPL and one-shot responder with history summarization
 
 ## Phase Details
 
@@ -91,43 +102,34 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 15-01-PLAN.md — Create internal/planner package: Plan/Task structs, ParsePlan with bufio frontmatter + XML task extraction, TestParsePlan suite
-- [ ] 15-02-PLAN.md — Add FindActivePlan directory scanner and TestFindActivePlan suite
+- [x] 15-01-PLAN.md — Create internal/planner package: Plan/Task structs, ParsePlan with bufio frontmatter + XML task extraction, TestParsePlan suite
+- [x] 15-02-PLAN.md — Add FindActivePlan directory scanner and TestFindActivePlan suite
 
-### Phase 16: Contract Extractor
-**Goal**: Exported types and signatures accumulate across tasks and are available for injection into subsequent task context
-**Depends on**: Phase 15
-**Requirements**: CONTRACT-01, CONTRACT-02, CONTRACT-03
+### Phase 16: CLI Cleanup
+**Goal**: The binary has no subcommands — `myhelper` is the only entry point and unrecognized subcommands are gone
+**Depends on**: Nothing (standalone surgery on cmd/)
+**Requirements**: CLEANUP-01
 **Success Criteria** (what must be TRUE):
-  1. After a task applies changes, exported Go declarations are extracted from the modified file via `go/ast` and stored in a `ContractAccumulator`
-  2. The accumulator's contents are injectable as a formatted context block into a task's message slice
-  3. When accumulated contracts would exceed 820 tokens, the oldest entries are summarized rather than dropped raw
-**Plans**: TBD
+  1. Running `myhelper starter`, `myhelper plan`, `myhelper lookup`, `myhelper pattern`, `myhelper inspect`, `myhelper init`, or `myhelper sync` returns an "unknown command" error
+  2. `go build ./...` passes with no errors after removal
+  3. All existing tests in internal packages (ollama, history, planner, scanner, retrieval) continue to pass
+**Plans**: 1 plan
 
-### Phase 17: Patch & Verify
-**Goal**: File changes are shown as a visual diff, written to disk on confirmation, and verified to compile
-**Depends on**: Phase 15
-**Requirements**: PATCH-01, PATCH-02, PATCH-03, VERIFY-01, VERIFY-02, VERIFY-03
-**Success Criteria** (what must be TRUE):
-  1. A human-readable unified diff is displayed to the user before any file is written
-  2. Confirming a task writes the complete generated file content directly to disk (no patch application)
-  3. `go build ./...` runs automatically after each applied task and halts progression on failure with full error output shown
-  4. `go test ./...` runs after each applied task; skippable with `--no-verify`; failure halts progression with full output shown
-**Plans**: TBD
-**UI hint**: yes
+Plans:
+- [ ] 16-01-PLAN.md — Delete 7 subcommand files, tui.go, coupled tests; trim root.go and helpers.go; run go mod tidy
 
-### Phase 18: Execute Command
-**Goal**: Users can run `myhelper execute` to step through all tasks in the active GSD phase plan with full retrieval context, contract accumulation, and compile verification
-**Depends on**: Phases 14, 15, 16, 17
-**Requirements**: EXEC-01, EXEC-02, EXEC-03, EXEC-04, EXEC-05, EXEC-06, CLEANUP-01
+### Phase 17: Chat Entry Point
+**Goal**: Users can chat with the local Ollama model by running `myhelper` or `myhelper "question"` with no other setup
+**Depends on**: Phase 16
+**Requirements**: CHAT-01, CHAT-02, CHAT-03, CHAT-04, CHAT-05, CHAT-06
 **Success Criteria** (what must be TRUE):
-  1. `myhelper execute` discovers and loads the active phase plan without arguments, presenting each task's description and target file before any action
-  2. User can confirm (y), skip (s), or quit (q) at each task gate; no file is written until confirmed
-  3. An interrupted session resumes from the last incomplete task when `execute` is run again in the same project
-  4. A Bubble Tea spinner appears on stderr during LLM generation for each task
-  5. The `plan` command is gone from the binary; `myhelper plan` returns an unknown command error
+  1. `myhelper` with no arguments starts an interactive REPL — user types a question, model streams a response, session continues until "quit" or Ctrl+C
+  2. `myhelper "what is a mutex?"` streams a response to stdout and exits with code 0
+  3. In a REPL session, a follow-up question receives a response that reflects the prior exchange (history is maintained across turns)
+  4. No system prompt is sent — the model receives only the user's messages and accumulated history
+  5. When history exceeds the token threshold, the session automatically summarizes silently and continues without interruption
+  6. Endpoint and model are picked up from `MYHELPER_ENDPOINT` / `MYHELPER_MODEL` env vars or `.myhelper/config.json` without any code changes
 **Plans**: TBD
-**UI hint**: yes
 
 ## Progress
 
@@ -146,8 +148,7 @@ Plans:
 | 11. Retrieval Package | v1.3 | 1/1 | Complete | 2026-04-10 |
 | 12. Adaptive Context Builder & Strategies | v1.3 | 3/3 | Complete | 2026-04-10 |
 | 13. Commands & Flags | v1.3 | 3/3 | Complete | 2026-04-10 |
-| 14. Ollama Client Extension | v2.0 | 1/1 | Complete    | 2026-04-11 |
-| 15. Plan Parser | v2.0 | 0/2 | Not started | - |
-| 16. Contract Extractor | v2.0 | 0/? | Not started | - |
-| 17. Patch & Verify | v2.0 | 0/? | Not started | - |
-| 18. Execute Command | v2.0 | 0/? | Not started | - |
+| 14. Ollama Client Extension | v2.0 | 1/1 | Complete | 2026-04-11 |
+| 15. Plan Parser | v2.0 | 2/2 | Complete | 2026-04-11 |
+| 16. CLI Cleanup | v3.0 | 0/? | Not started | - |
+| 17. Chat Entry Point | v3.0 | 0/? | Not started | - |
