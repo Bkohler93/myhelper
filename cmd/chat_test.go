@@ -46,7 +46,7 @@ func TestRootCmd_REPL(t *testing.T) {
 	restore := replaceStdin(t, "hello\nquit\n")
 	defer restore()
 
-	err := runConversationLoop(config.Config{}, hist, fs.call, "", "")
+	err := runConversationLoop(config.Config{}, hist, fs.call, "", "", nil)
 	if err != nil {
 		t.Fatalf("expected nil error, got %v", err)
 	}

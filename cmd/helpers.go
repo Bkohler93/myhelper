@@ -64,6 +64,7 @@ func runConversationLoop(
 	streamFn func(config.Config, []history.Message) (string, error),
 	summarizePrompt string,
 	recondensePrompt string,
+	preprocessor func(string) string, // NEW: nil = identity (no-op)
 ) error {
 	// Install SIGINT handler (per D-03).
 	sigCh := make(chan os.Signal, 1)
@@ -134,7 +135,11 @@ func runConversationLoop(
 			return nil // per D-04
 		}
 
-		hist.Add("user", input)
+		msg := input
+		if preprocessor != nil {
+			msg = preprocessor(input)
+		}
+		hist.Add("user", msg)
 		response, err := streamFn(cfg, hist.Messages())
 		if err != nil {
 			return err

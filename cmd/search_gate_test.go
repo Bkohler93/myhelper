@@ -193,6 +193,23 @@ func TestBuildWebBlock_BudgetTrim(t *testing.T) {
 	}
 }
 
+func TestBuildUserMessage_NoSearch(t *testing.T) {
+	// noSearch=true must return query unchanged regardless of gate response
+	result := buildUserMessage("what is the latest Go release?", config.Config{}, search.Config{}, false, true)
+	if result != "what is the latest Go release?" {
+		t.Errorf("expected query unchanged with noSearch=true, got %q", result)
+	}
+}
+
+func TestBuildUserMessage_ForceSearch(t *testing.T) {
+	// forceSearch=true bypasses gate; if search.Search fails (no server), returns query unchanged
+	result := buildUserMessage("what is a goroutine?", config.Config{}, search.Config{Endpoint: "http://127.0.0.1:1"}, true, false)
+	// search.Search will fail (no server at port 1) → graceful degrade → returns original query
+	if result != "what is a goroutine?" {
+		t.Errorf("expected query unchanged when search.Search errors, got %q", result)
+	}
+}
+
 // contains checks whether substr appears in s.
 func contains(s, substr string) bool {
 	return len(substr) > 0 && len(s) >= len(substr) && indexOf(s, substr) >= 0

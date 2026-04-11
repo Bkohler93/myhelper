@@ -103,3 +103,37 @@ func buildWebBlock(results []search.Result, budgetTokens int, cfg config.Config)
 func countTokens(s string, cfg config.Config) int {
 	return history.New(cfg.TokenThreshold, []history.Message{{Role: "user", Content: s}}).TokenCount()
 }
+
+// buildUserMessage augments the user query with a [WEB RESULTS] block if appropriate.
+// Returns the original query unchanged when search is skipped.
+// noSearch (GATE-04) takes priority over forceSearch (GATE-03).
+func buildUserMessage(query string, cfg config.Config, searchCfg search.Config, forceSearch, noSearch bool) string {
+	if noSearch {
+		return query // GATE-04: --no-search suppresses all search
+	}
+
+	doSearch := forceSearch // GATE-03: --search forces gate=true
+	if !doSearch {
+		doSearch = searchGate(query, cfg) // GATE-01/GATE-02
+	}
+	if !doSearch {
+		return query
+	}
+
+	results, err := search.Search(query, searchCfg)
+	if err != nil || len(results) == 0 {
+		return query // network/empty: degrade gracefully
+	}
+
+	ranked, _ := reRankResults(query, results, cfg)
+	if ranked == nil {
+		return query // RANK-03: zero relevant results → skip injection
+	}
+
+	budget := cfg.TokenThreshold / 4 // 25% reserved for web context
+	block := buildWebBlock(ranked, budget, cfg)
+	if block == "" {
+		return query
+	}
+	return block + query // block BEFORE query (context before question, per INJ-01)
+}

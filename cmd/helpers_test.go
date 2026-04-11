@@ -55,7 +55,7 @@ func TestRunConversationLoop(t *testing.T) {
 		restore := replaceStdin(t, "quit\n")
 		defer restore()
 
-		err := runConversationLoop(config.Config{}, hist, fs.call, "", "")
+		err := runConversationLoop(config.Config{}, hist, fs.call, "", "", nil)
 		if err != nil {
 			t.Fatalf("expected nil error, got %v", err)
 		}
@@ -71,7 +71,7 @@ func TestRunConversationLoop(t *testing.T) {
 		restore := replaceStdin(t, "\nquit\n")
 		defer restore()
 
-		err := runConversationLoop(config.Config{}, hist, fs.call, "", "")
+		err := runConversationLoop(config.Config{}, hist, fs.call, "", "", nil)
 		if err != nil {
 			t.Fatalf("expected nil error, got %v", err)
 		}
@@ -86,7 +86,7 @@ func TestRunConversationLoop(t *testing.T) {
 		restore := replaceStdin(t, "hello\nquit\n")
 		defer restore()
 
-		err := runConversationLoop(config.Config{}, hist, fs.call, "", "")
+		err := runConversationLoop(config.Config{}, hist, fs.call, "", "", nil)
 		if err != nil {
 			t.Fatalf("expected nil error, got %v", err)
 		}
@@ -112,7 +112,7 @@ func TestRunConversationLoop(t *testing.T) {
 		restore := replaceStdin(t, "some input\n")
 		defer restore()
 
-		err := runConversationLoop(config.Config{}, hist, fs.call, "", "")
+		err := runConversationLoop(config.Config{}, hist, fs.call, "", "", nil)
 		if err == nil {
 			t.Fatal("expected error, got nil")
 		}
@@ -134,7 +134,7 @@ func TestRunConversationLoop(t *testing.T) {
 
 		done := make(chan error, 1)
 		go func() {
-			done <- runConversationLoop(config.Config{}, hist, fs.call, "", "")
+			done <- runConversationLoop(config.Config{}, hist, fs.call, "", "", nil)
 		}()
 
 		// Give the goroutine time to block on stdin, then send SIGINT.
@@ -168,7 +168,7 @@ func TestRunConversationLoop_Summarization(t *testing.T) {
 		restore := replaceStdin(t, "follow-up\nquit\n")
 		defer restore()
 
-		err := runConversationLoop(config.Config{}, hist, fs.call, "summarize prompt", "recondense prompt")
+		err := runConversationLoop(config.Config{}, hist, fs.call, "summarize prompt", "recondense prompt", nil)
 		if err != nil {
 			t.Fatalf("expected nil error, got %v", err)
 		}
