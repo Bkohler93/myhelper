@@ -7,7 +7,8 @@
 - ✅ **v1.2 Smart Context** — Phases 5-8 (shipped 2026-04-08)
 - ✅ **v1.3 Structured Code Intelligence** — Phases 9-13 (shipped 2026-04-10)
 - ✅ **v2.0 GSD Plan Executor** — Phases 14-15 (partial; abandoned 2026-04-10)
-- 🚧 **v3.0 Simple Chat Wrapper** — Phases 16-17 (in progress)
+- ✅ **v3.0 Simple Chat Wrapper** — Phases 16-17 (shipped 2026-04-11)
+- 🚧 **v3.1 Web Search** — Phases 18-19 (in progress)
 
 ## Phases
 
@@ -69,12 +70,20 @@ Note: Phases 16-18 were not built. Internal packages from v2.0 (planner, scanner
 
 </details>
 
-### 🚧 v3.0 Simple Chat Wrapper (In Progress)
+<details>
+<summary>✅ v3.0 Simple Chat Wrapper (Phases 16-17) — SHIPPED 2026-04-11</summary>
 
-**Milestone Goal:** Strip myhelper down to a language-agnostic interactive chat interface over the local Ollama model — fast, minimal, useful for any quick question.
+- [x] Phase 16: CLI Cleanup (1/1 plan) — completed 2026-04-11
+- [x] Phase 17: Chat Entry Point (1/1 plan) — completed 2026-04-11
 
-- [x] **Phase 16: CLI Cleanup** - Remove all subcommands from the cobra tree, leaving root command as sole entry point (completed 2026-04-11)
-- [ ] **Phase 17: Chat Entry Point** - Wire root command as multi-turn REPL and one-shot responder with history summarization
+</details>
+
+### 🚧 v3.1 Web Search (In Progress)
+
+**Milestone Goal:** Add internet search capability to the chat path via SearXNG, with an automatic detection gate and LLM-filtered result injection.
+
+- [ ] **Phase 18: SearXNG Client** - Build `internal/search/` package with configurable endpoint, structured results, and clean error handling
+- [ ] **Phase 19: Search Gate & Injection** - Auto-detect gate, LLM re-rank pass, token-budget-aware context injection, and `--search`/`--no-search` flags
 
 ## Phase Details
 
@@ -132,7 +141,31 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 17-01-PLAN.md — Wave 0 test stubs + rewrite summarize for no-system-prompt + wire root.go as REPL/one-shot entry point
+- [x] 17-01-PLAN.md — Wave 0 test stubs + rewrite summarize for no-system-prompt + wire root.go as REPL/one-shot entry point
+
+### Phase 18: SearXNG Client
+**Goal**: A standalone `internal/search/` package can query a SearXNG instance and return structured results ready for downstream consumption
+**Depends on**: Phase 17
+**Requirements**: SRCH-01, SRCH-02, SRCH-03, SRCH-04, SRCH-05
+**Success Criteria** (what must be TRUE):
+  1. Calling `search.Search("golang channels", cfg)` against a live SearXNG instance returns a slice of `Result` values each containing non-empty `Title`, `URL`, and `Snippet` fields
+  2. The SearXNG endpoint is resolved from `MYHELPER_SEARCH_ENDPOINT` env var, then `.myhelper/config.json`, then `~/.config/myhelper/config.json`, defaulting to `http://192.168.0.9:8083`
+  3. A network error or non-200 HTTP response returns an error from `Search` — the caller receives the error and the result slice is nil
+  4. A successful call requests 8–10 results from SearXNG's `/search?q=...&format=json` endpoint (observable via request parameters in tests)
+**Plans**: TBD
+
+### Phase 19: Search Gate & Injection
+**Goal**: The chat path automatically fetches and injects web search results when the query needs current information, with user flags to override
+**Depends on**: Phase 18
+**Requirements**: GATE-01, GATE-02, GATE-03, GATE-04, RANK-01, RANK-02, RANK-03, INJ-01, INJ-02, INJ-03
+**Success Criteria** (what must be TRUE):
+  1. Asking "what is the latest Go release?" triggers a search automatically and the model response cites fetched snippets — without any flags
+  2. Asking "what is a goroutine?" does not trigger a search — the gate returns false and the model answers from its own knowledge
+  3. Running `myhelper --search "what is a goroutine?"` forces a search even though the gate would have returned false
+  4. Running `myhelper --no-search "what is the latest Go release?"` suppresses search even though the gate would have returned true
+  5. When search is triggered, the injected message block is clearly delimited (e.g., `[WEB RESULTS]`), contains title and URL alongside each snippet, and fits within the configured token limit
+  6. If the re-rank LLM call fails or returns no valid indices, the model still responds — either using all fetched results (re-rank error) or from its own knowledge (zero relevant results)
+**Plans**: TBD
 
 ## Progress
 
@@ -153,5 +186,7 @@ Plans:
 | 13. Commands & Flags | v1.3 | 3/3 | Complete | 2026-04-10 |
 | 14. Ollama Client Extension | v2.0 | 1/1 | Complete | 2026-04-11 |
 | 15. Plan Parser | v2.0 | 2/2 | Complete | 2026-04-11 |
-| 16. CLI Cleanup | v3.0 | 1/1 | Complete   | 2026-04-11 |
-| 17. Chat Entry Point | v3.0 | 0/1 | Not started | - |
+| 16. CLI Cleanup | v3.0 | 1/1 | Complete | 2026-04-11 |
+| 17. Chat Entry Point | v3.0 | 1/1 | Complete | 2026-04-11 |
+| 18. SearXNG Client | v3.1 | 0/? | Not started | - |
+| 19. Search Gate & Injection | v3.1 | 0/? | Not started | - |

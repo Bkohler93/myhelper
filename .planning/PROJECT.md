@@ -4,17 +4,16 @@
 
 A Go CLI tool that acts as a local-model-powered executor for GSD phase plans. Claude/GSD handles research and planning; myhelper reads the structured PLAN.md output and drives a locally-hosted 7B model (Ollama + qwen2.5-coder:7b) through atomic code changes step-by-step. The tool builds targeted retrieval context per task using a hierarchical codebase index, accumulates contracts (exported types/signatures) across sequential tasks to maintain cross-file consistency, generates patches, and verifies each change compiles before moving on. Ad-hoc query commands (`starter`, `lookup`, `pattern`) remain for quick one-off coding questions. No external API dependencies. v2.0 in development.
 
-## Current Milestone: v2.0 GSD Plan Executor
+## Current Milestone: v3.1 Web Search
 
-**Goal:** Transform myhelper into a GSD-integrated code executor — reading structured PLAN.md files, injecting targeted retrieval context per task, and driving the local 7B model through atomic code changes step-by-step with patch application and compile verification.
+**Goal:** Add internet search capability to the chat path via SearXNG, with an automatic detection gate and LLM-filtered result injection.
 
 **Target features:**
-- New `execute` command — discovers active phase plan from `.planning/phases/`, presents tasks one by one with confirm gate before applying
-- Sequential contract accumulation — extract newly written exported types/signatures after each task and inject into subsequent task context
-- Patch application — generate unified diff and apply programmatically
-- Compile verification gate — `go build` + `go test` after each applied patch, configurable with `--no-verify`
-- Remove `plan` command — planning delegated to Claude/GSD
-- Keep `starter`, `lookup`, `pattern` as ad-hoc helpers unchanged
+- SearXNG JSON client (`internal/search/`) — fetch 8–10 results, parse title/url/snippet
+- Auto-detect gate — cheap yes/no LLM call before responding; triggers search when query needs current/real-time information
+- LLM re-rank pass — filters fetched results to only relevant ones before injection (mirrors existing `llmReRank` pattern)
+- Inject surviving result snippets as context before model responds
+- `--search` flag to force search on, `--no-search` to suppress
 
 ## Core Value
 
@@ -56,11 +55,11 @@ Get a precise, project-aware answer from a local 7B model by enabling it to navi
 
 ### Active
 
-- [ ] `execute` command — discovers and parses active GSD PLAN.md from `.planning/phases/`, presents tasks step-by-step
-- [ ] Sequential contract accumulation — inject prior task's exported types/signatures into subsequent task retrieval context
-- [ ] Patch generation and application — produce unified diff and apply programmatically per task
-- [ ] Compile verification gate — `go build` + `go test` after each applied patch; `--no-verify` flag to skip
-- [ ] Remove `plan` command — planning delegated to Claude/GSD
+- [ ] SearXNG client — `internal/search/` package, fetches 8–10 results, parses title/url/snippet from JSON API
+- [ ] Auto-detect search gate — yes/no LLM call before responding; triggers when query needs current/real-time information
+- [ ] LLM re-rank pass — filters fetched results to relevant subset before context injection
+- [ ] Result injection — surviving snippets injected as context block before model responds; graceful fallback if none survive
+- [ ] `--search` / `--no-search` flags — force or suppress search regardless of gate decision
 
 ### Out of Scope
 
@@ -127,4 +126,4 @@ This document evolves at milestone boundaries.
 4. Context + architecture update
 
 ---
-*Last updated: 2026-04-10 after v2.0 GSD Plan Executor milestone start*
+*Last updated: 2026-04-10 after v3.1 Web Search milestone start*
