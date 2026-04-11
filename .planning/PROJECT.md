@@ -2,18 +2,7 @@
 
 ## What This Is
 
-A Go CLI tool that acts as a local-model-powered executor for GSD phase plans. Claude/GSD handles research and planning; myhelper reads the structured PLAN.md output and drives a locally-hosted 7B model (Ollama + qwen2.5-coder:7b) through atomic code changes step-by-step. The tool builds targeted retrieval context per task using a hierarchical codebase index, accumulates contracts (exported types/signatures) across sequential tasks to maintain cross-file consistency, generates patches, and verifies each change compiles before moving on. Ad-hoc query commands (`starter`, `lookup`, `pattern`) remain for quick one-off coding questions. No external API dependencies. v2.0 in development.
-
-## Current Milestone: v3.1 Web Search
-
-**Goal:** Add internet search capability to the chat path via SearXNG, with an automatic detection gate and LLM-filtered result injection.
-
-**Target features:**
-- SearXNG JSON client (`internal/search/`) — fetch 8–10 results, parse title/url/snippet
-- Auto-detect gate — cheap yes/no LLM call before responding; triggers search when query needs current/real-time information
-- LLM re-rank pass — filters fetched results to only relevant ones before injection (mirrors existing `llmReRank` pattern)
-- Inject surviving result snippets as context before model responds
-- `--search` flag to force search on, `--no-search` to suppress
+A Go CLI that provides fast, local-model-powered chat (`myhelper chat`) with optional web search augmentation via SearXNG. For queries needing current information, the tool automatically gates on a yes/no LLM call, fetches and re-ranks results, then injects surviving snippets into the context before the model responds. Ad-hoc query commands (`starter`, `lookup`, `pattern`, `plan`) remain for project-aware coding assistance using a hierarchical codebase index. No external API dependencies — all inference is local Ollama.
 
 ## Core Value
 
@@ -53,19 +42,20 @@ Get a precise, project-aware answer from a local 7B model by enabling it to navi
 - ✓ `--token-limit` flag correctly caps retrieval budget via `ApplyFlagOverrides` — v1.3
 - ✓ Large file handling — micro-pass using `go/ast` symbol map to request line range; truncate as safety net — v1.2
 
+- ✓ SearXNG client (`internal/search/`) — fetches 8–10 results, parses title/url/snippet, configurable endpoint — v3.1
+- ✓ Auto-detect search gate — yes/no LLM call; triggers when query needs current/real-time information; fails open — v3.1
+- ✓ LLM re-rank pass — filters fetched results to relevant subset; graceful fallback on error or zero results — v3.1
+- ✓ Result injection — `[WEB RESULTS]` block prepended to query; token-budget-aware truncation — v3.1
+- ✓ `--search` / `--no-search` flags — force or suppress search regardless of gate decision — v3.1
+
 ### Active
 
-- [ ] SearXNG client — `internal/search/` package, fetches 8–10 results, parses title/url/snippet from JSON API
-- [ ] Auto-detect search gate — yes/no LLM call before responding; triggers when query needs current/real-time information
-- [ ] LLM re-rank pass — filters fetched results to relevant subset before context injection
-- [ ] Result injection — surviving snippets injected as context block before model responds; graceful fallback if none survive
-- [ ] `--search` / `--no-search` flags — force or suppress search regardless of gate decision
+(None — planning next milestone)
 
 ### Out of Scope
 
 - Nested sub-indexes for extremely large projects (revisit if hierarchical index exceeds budget)
 - Global/fallback context.md — per-directory only, avoids cross-project bleed
-- Web search or external API calls — local inference only
 - Non-Go optimization — tool remains Go-first; other languages incidental
 - Conversation history persistence across sessions — single-session only
 - Vector/embedding search as a primary retrieval mechanism — structured retrieval is preferred
@@ -80,15 +70,17 @@ Get a precise, project-aware answer from a local 7B model by enabling it to navi
 - **Retrieval constraint**: context must fit within ~80% of token threshold after system + history
 - **User workflow**: Developer runs tool inside a Go project; `init` builds structured index; query commands retrieve minimal context and expand as needed
 - **Primary use case**: Solo developer productivity tool; local-only execution
-- **Codebase state (v1.3)**: ~3,200 LOC Go (source, estimated), ~2,900 LOC tests; 37 source files
-- **Tech stack**: Go, cobra, Bubble Tea, bufio scanner (NDJSON streaming), go-tiktoken, go/ast, JSON-based index, `internal/retrieval` pipeline
-- **Known tech debt (v1.3)**:
+- **Codebase state (v3.1)**: ~7,500 LOC Go total (source + tests); includes `internal/search/`, `cmd/search.go` web search pipeline
+- **Tech stack**: Go, cobra, bufio scanner (NDJSON streaming), go-tiktoken, go/ast, JSON-based index, `internal/retrieval` pipeline, SearXNG JSON API
+- **Known tech debt (v3.1)**:
   - `Symbol.CallEdges`/`TypeRefs` stored but not consumed by retrieval pipeline
   - `PackageEntry.Responsibility` written to `packages.json` but unused in `llmReRank`
   - Dual context injection (`context.md` + `proj.Summary`) — same source, redundant tokens
   - Phase 11 VERIFICATION.md missing — RET-01–06 confirmed by downstream but not formally verified
   - `inspect` ignores `--no-context` flag
   - `BuildContext`/`BuildInspectContext` silently discard `llmReRank` error return
+  - `cmd/search.go:countTokens` duplicates `retrieval.tokenCount` helper
+  - SearXNG URL built via string concat — trailing slash on endpoint causes double-slash path
 
 ## Constraints
 
@@ -114,6 +106,11 @@ Get a precise, project-aware answer from a local 7B model by enabling it to navi
 | context.md remains user-defined | Avoids unreliable auto-detection | ✓ Stable |
 | Streaming output via NDJSON | Improves perceived latency | ✓ Stable |
 | Iterative retrieval (optional) | Allows model to request missing context | — Pending (not yet implemented) |
+| SearXNG as search backend | Aggregates multiple engines; self-hostable; no API key | ✓ v3.1 — clean integration |
+| Search gate fails open (skips search on LLM error) | Unwanted network call worse than missing context | ✓ v3.1 — GATE-02 |
+| LLM re-rank before injection | Reduces irrelevant noise in context window | ✓ v3.1 — RANK-01/02/03 |
+| 25% token budget for web context | Leaves 75% for codebase context and history | ✓ v3.1 — INJ-02 |
+| num_results=10 hardcoded | CLI surface stays small; default sufficient per REQUIREMENTS.md | ✓ v3.1 — SRCH-04 |
 
 ## Evolution
 
@@ -126,4 +123,4 @@ This document evolves at milestone boundaries.
 4. Context + architecture update
 
 ---
-*Last updated: 2026-04-10 after v3.1 Web Search milestone start*
+*Last updated: 2026-04-11 after v3.1 Web Search milestone complete*

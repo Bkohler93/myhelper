@@ -1,5 +1,18 @@
 # Milestones
 
+## v3.1 Web Search (Shipped: 2026-04-11)
+
+**Phases completed:** 3 phases, 4 plans, 3 tasks
+
+**Key accomplishments:**
+
+- Standalone SearXNG HTTP client package (internal/search) with url.QueryEscape injection, result filtering, and env/file config resolution — all five SRCH requirements satisfied via TDD
+- One-liner:
+- One-liner:
+- One-liner:
+
+---
+
 ## v1.3 Structured Code Intelligence (Shipped: 2026-04-10)
 
 **Phases completed:** 5 phases, 11 plans

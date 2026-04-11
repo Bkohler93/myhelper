@@ -2,14 +2,15 @@
 gsd_state_version: 1.0
 milestone: v3.1
 milestone_name: Web Search
-status: complete
-stopped_at: v3.1 complete — all phases done (18-19)
-last_updated: "2026-04-11T00:00:00.000Z"
+status: completed
+stopped_at: v3.1 milestone complete — all phases shipped (18, 19, 20)
+last_updated: "2026-04-11T07:06:39.278Z"
+last_activity: 2026-04-11
 progress:
-  total_phases: 2
-  completed_phases: 2
-  total_plans: 3
-  completed_plans: 3
+  total_phases: 3
+  completed_phases: 3
+  total_plans: 4
+  completed_plans: 4
   percent: 100
 ---
 
@@ -26,15 +27,15 @@ See: .planning/PROJECT.md (updated 2026-04-10)
 
 Phase: — (all phases complete)
 Plan: —
-Status: v3.1 milestone complete — SearXNG client + search gate + injection shipped
-Last activity: 2026-04-11 — Phase 19 complete (search gate & injection, 2 plans)
+Status: v3.1 milestone complete — SearXNG client + search gate + injection + SRCH-04 fix shipped
+Last activity: 2026-04-11
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 40 (across v1.0, v1.1, v1.2, v1.3, v3.1)
-- v3.1: 3 plans across 2 phases
+- Total plans completed: 41 (across v1.0, v1.1, v1.2, v1.3, v3.1)
+- v3.1: 4 plans across 3 phases
 
 **By Phase:**
 
@@ -55,6 +56,7 @@ Last activity: 2026-04-11 — Phase 19 complete (search gate & injection, 2 plan
 | v1.3 Phase 13 | 3 | Complete |
 | v3.1 Phase 18 | 1 | Complete |
 | v3.1 Phase 19 | 2 | Complete |
+| v3.1 Phase 20 | 1 | Complete |
 
 ## Accumulated Context
 
@@ -79,5 +81,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-04-11
-Stopped at: v3.1 milestone complete — all phases shipped
+Stopped at: v3.1 milestone complete — all phases shipped (18, 19, 20)
 Resume: `/gsd-complete-milestone` to archive v3.1 and prepare v3.2

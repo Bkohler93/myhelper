@@ -8,7 +8,7 @@
 - ✅ **v1.3 Structured Code Intelligence** — Phases 9-13 (shipped 2026-04-10)
 - ✅ **v2.0 GSD Plan Executor** — Phases 14-15 (partial; abandoned 2026-04-10)
 - ✅ **v3.0 Simple Chat Wrapper** — Phases 16-17 (shipped 2026-04-11)
-- 🚧 **v3.1 Web Search** — Phases 18-19 (in progress)
+- ✅ **v3.1 Web Search** — Phases 18-20 (shipped 2026-04-11)
 
 ## Phases
 
@@ -78,58 +78,16 @@ Note: Phases 16-18 were not built. Internal packages from v2.0 (planner, scanner
 
 </details>
 
-### 🚧 v3.1 Web Search (In Progress)
+<details>
+<summary>✅ v3.1 Web Search (Phases 18-20) — SHIPPED 2026-04-11</summary>
 
-**Milestone Goal:** Add internet search capability to the chat path via SearXNG, with an automatic detection gate and LLM-filtered result injection.
+- [x] Phase 18: SearXNG Client (1/1 plan) — completed 2026-04-11
+- [x] Phase 19: Search Gate & Injection (2/2 plans) — completed 2026-04-11
+- [x] Phase 20: Fix SRCH-04 — Result Count Param (1/1 plan) — completed 2026-04-11
 
-- [x] **Phase 18: SearXNG Client** - Build `internal/search/` package with configurable endpoint, structured results, and clean error handling (1/1 plan) — completed 2026-04-11
-- [x] **Phase 19: Search Gate & Injection** - Auto-detect gate, LLM re-rank pass, token-budget-aware context injection, and `--search`/`--no-search` flags (2/2 plans) — completed 2026-04-11
-- [ ] **Phase 20: Fix SRCH-04 — Result Count Param** - Add `num_results` query param to SearXNG URL, add test subtest, fix GATE-02 comment, regenerate Phase 18 VERIFICATION frontmatter (1 plan) — not started
+Full archive: `.planning/milestones/v3.1-ROADMAP.md`
 
-## Phase Details
-
-### Phase 18: SearXNG Client
-**Goal**: A standalone `internal/search/` package can query a SearXNG instance and return structured results ready for downstream consumption
-**Depends on**: Phase 17
-**Requirements**: SRCH-01, SRCH-02, SRCH-03, SRCH-04, SRCH-05
-**Success Criteria** (what must be TRUE):
-  1. Calling `search.Search("golang channels", cfg)` against a live SearXNG instance returns a slice of `Result` values each containing non-empty `Title`, `URL`, and `Snippet` fields
-  2. The SearXNG endpoint is resolved from `MYHELPER_SEARCH_ENDPOINT` env var, then `.myhelper/config.json`, then `~/.config/myhelper/config.json`, defaulting to `http://192.168.0.9:8083`
-  3. A network error or non-200 HTTP response returns an error from `Search` — the caller receives the error and the result slice is nil
-  4. A successful call requests 8–10 results from SearXNG's `/search?q=...&format=json` endpoint (observable via request parameters in tests)
-**Plans**: 1 plan
-Plans:
-- [x] 18-01-PLAN.md — Build internal/search package: Config, LoadConfig(), Result, Search() with httptest-based unit tests
-
-### Phase 19: Search Gate & Injection
-**Goal**: The chat path automatically fetches and injects web search results when the query needs current information, with user flags to override
-**Depends on**: Phase 18
-**Requirements**: GATE-01, GATE-02, GATE-03, GATE-04, RANK-01, RANK-02, RANK-03, INJ-01, INJ-02, INJ-03
-**Success Criteria** (what must be TRUE):
-  1. Asking "what is the latest Go release?" triggers a search automatically and the model response cites fetched snippets — without any flags
-  2. Asking "what is a goroutine?" does not trigger a search — the gate returns false and the model answers from its own knowledge
-  3. Running `myhelper --search "what is a goroutine?"` forces a search even though the gate would have returned false
-  4. Running `myhelper --no-search "what is the latest Go release?"` suppresses search even though the gate would have returned true
-  5. When search is triggered, the injected message block is clearly delimited (e.g., `[WEB RESULTS]`), contains title and URL alongside each snippet, and fits within the configured token limit
-  6. If the re-rank LLM call fails or returns no valid indices, the model still responds — either using all fetched results (re-rank error) or from its own knowledge (zero relevant results)
-**Plans**: 2 plans
-Plans:
-- [ ] 19-01-PLAN.md — TDD: test stubs (Wave 0) + searchGate, reRankResults, filterByIndices, buildWebBlock, countTokens in cmd/search.go
-- [ ] 19-02-PLAN.md — Wire: buildUserMessage orchestrator + --search/--no-search flags + runConversationLoop preprocessor param
-
-### Phase 20: Fix SRCH-04 — Result Count Param
-**Goal**: Close the one remaining v3.1 audit gap — SearXNG requests include a result-count parameter, verified by a dedicated test subtest; minor terminology and tracking cleanup included
-**Depends on**: Phase 18
-**Requirements**: SRCH-04
-**Gap Closure**: Closes SRCH-04 gap from v3.1-MILESTONE-AUDIT.md
-**Success Criteria** (what must be TRUE):
-  1. `internal/search/search.go` URL construction includes a `num_results` query parameter (value 10)
-  2. `TestSearch_RequestParams/result_count_present` subtest asserts the count param is present in the captured request URL and passes
-  3. `cmd/search.go:19` comment reads "fails open (search skipped on error)" — aligned with REQUIREMENTS.md GATE-02
-  4. Phase 18 VERIFICATION.md frontmatter is regenerated: `status: passed`, `score: 6/6`
-**Plans**: 1 plan
-Plans:
-- [ ] 20-01-PLAN.md — Fix SRCH-04: add num_results param + test subtest, fix GATE-02 comment, regenerate Phase 18 VERIFICATION frontmatter
+</details>
 
 ## Progress
 
@@ -154,4 +112,4 @@ Plans:
 | 17. Chat Entry Point | v3.0 | 1/1 | Complete | 2026-04-11 |
 | 18. SearXNG Client | v3.1 | 1/1 | Complete | 2026-04-11 |
 | 19. Search Gate & Injection | v3.1 | 2/2 | Complete | 2026-04-11 |
-| 20. Fix SRCH-04 — Result Count Param | v3.1 | 0/1 | Not started | - |
+| 20. Fix SRCH-04 — Result Count Param | v3.1 | 1/1 | Complete   | 2026-04-11 |
