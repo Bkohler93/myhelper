@@ -84,6 +84,7 @@ Note: Phases 16-18 were not built. Internal packages from v2.0 (planner, scanner
 
 - [x] **Phase 18: SearXNG Client** - Build `internal/search/` package with configurable endpoint, structured results, and clean error handling (1/1 plan) — completed 2026-04-11
 - [x] **Phase 19: Search Gate & Injection** - Auto-detect gate, LLM re-rank pass, token-budget-aware context injection, and `--search`/`--no-search` flags (2/2 plans) — completed 2026-04-11
+- [ ] **Phase 20: Fix SRCH-04 — Result Count Param** - Add `num_results` query param to SearXNG URL, add test subtest, fix GATE-02 comment, regenerate Phase 18 VERIFICATION frontmatter (1 plan) — not started
 
 ## Phase Details
 
@@ -116,6 +117,20 @@ Plans:
 - [ ] 19-01-PLAN.md — TDD: test stubs (Wave 0) + searchGate, reRankResults, filterByIndices, buildWebBlock, countTokens in cmd/search.go
 - [ ] 19-02-PLAN.md — Wire: buildUserMessage orchestrator + --search/--no-search flags + runConversationLoop preprocessor param
 
+### Phase 20: Fix SRCH-04 — Result Count Param
+**Goal**: Close the one remaining v3.1 audit gap — SearXNG requests include a result-count parameter, verified by a dedicated test subtest; minor terminology and tracking cleanup included
+**Depends on**: Phase 18
+**Requirements**: SRCH-04
+**Gap Closure**: Closes SRCH-04 gap from v3.1-MILESTONE-AUDIT.md
+**Success Criteria** (what must be TRUE):
+  1. `internal/search/search.go` URL construction includes a `num_results` query parameter (value 10)
+  2. `TestSearch_RequestParams/result_count_present` subtest asserts the count param is present in the captured request URL and passes
+  3. `cmd/search.go:19` comment reads "fails open (search skipped on error)" — aligned with REQUIREMENTS.md GATE-02
+  4. Phase 18 VERIFICATION.md frontmatter is regenerated: `status: passed`, `score: 6/6`
+**Plans**: 1 plan
+Plans:
+- [ ] 20-01-PLAN.md — Fix SRCH-04: add num_results param + test subtest, fix GATE-02 comment, regenerate Phase 18 VERIFICATION frontmatter
+
 ## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
@@ -138,4 +153,5 @@ Plans:
 | 16. CLI Cleanup | v3.0 | 1/1 | Complete | 2026-04-11 |
 | 17. Chat Entry Point | v3.0 | 1/1 | Complete | 2026-04-11 |
 | 18. SearXNG Client | v3.1 | 1/1 | Complete | 2026-04-11 |
-| 19. Search Gate & Injection | v3.1 | 0/2 | Not started | - |
+| 19. Search Gate & Injection | v3.1 | 2/2 | Complete | 2026-04-11 |
+| 20. Fix SRCH-04 — Result Count Param | v3.1 | 0/1 | Not started | - |
