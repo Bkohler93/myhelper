@@ -12,6 +12,10 @@ var rootCmd = &cobra.Command{
 	Short:             "A focused chat assistant backed by a local Ollama model",
 	Long:              "myhelper sends messages to a local Ollama server and streams responses to stdout.",
 	CompletionOptions: cobra.CompletionOptions{HiddenDefaultCmd: true},
+	Args:              cobra.NoArgs,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return nil
+	},
 }
 
 func Execute() {
