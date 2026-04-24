@@ -806,13 +806,13 @@ func BuildInspectContext(
 		messages := []history.Message{
 			{Role: "user", Content: msg},
 		}
-		rawAnswer, err := chatFn(cfg, messages)
-		if err != nil {
-			rawAnswer = ""
+		rawAnswer, gateErr := chatFn(cfg, messages)
+		if gateErr != nil {
+			rawAnswer = "[gate LLM error: " + gateErr.Error() + "]"
 		}
 		result.GateAnswer = strings.TrimSpace(rawAnswer)
 		lower := strings.ToLower(result.GateAnswer)
-		result.GatePassed = !strings.HasPrefix(lower, "no")
+		result.GatePassed = gateErr == nil && !strings.HasPrefix(lower, "no")
 		if !result.GatePassed {
 			return result, nil
 		}
