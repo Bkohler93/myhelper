@@ -16,9 +16,9 @@
 
 ### UX — loading spinners
 
-- [ ] **UX-01**: A Bubble Tea spinner is shown while SearXNG fetches results; disappears when fetch completes
-- [ ] **UX-02**: A Bubble Tea spinner is shown while the LLM search-gate call runs; disappears when decision is made
-- [ ] **UX-03**: A Bubble Tea spinner is shown while the LLM re-rank call runs; disappears when re-ranking completes
+- [x] **UX-01**: A Bubble Tea spinner is shown while SearXNG fetches results; disappears when fetch completes
+- [x] **UX-02**: A Bubble Tea spinner is shown while the LLM search-gate call runs; disappears when decision is made
+- [x] **UX-03**: A Bubble Tea spinner is shown while the LLM re-rank call runs; disappears when re-ranking completes
 
 ### BUG — correctness fixes
 

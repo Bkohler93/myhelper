@@ -93,7 +93,7 @@ Full archive: `.planning/milestones/v3.1-ROADMAP.md`
 ### v3.2 Observability & Polish
 
 - [x] **Phase 21: inspect Command** — Wire cmd/inspect.go to BuildInspectContext with per-stage formatted output
-- [ ] **Phase 22: Search Pipeline Spinners** — Add goroutine-based spinners for SearXNG fetch, LLM gate, and LLM re-rank (no new dependencies)
+- [x] **Phase 22: Search Pipeline Spinners** — Add goroutine-based spinners for SearXNG fetch, LLM gate, and LLM re-rank (no new dependencies)
 - [ ] **Phase 23: Cleanup & Correctness** — Fix bugs, eliminate dead code, and close dual context injection and microPassFile debt
 
 ## Phase Details
@@ -124,7 +124,7 @@ Plans:
   4. Spinner is goroutine-based using only stdlib (os, time, fmt, strings) — go.mod is unchanged
 **Plans**: 1 plan
 Plans:
-- [ ] 22-01-PLAN.md — Add spinner type + wire 3 call sites in cmd/search.go (buildUserMessage)
+- [x] 22-01-PLAN.md — Add spinner type + wire 3 call sites in cmd/search.go (buildUserMessage)
 
 ### Phase 23: Cleanup & Correctness
 **Goal**: All known v3.1 tech debt is eliminated — bugs fixed, duplicate code removed, and dormant fields either wired or documented — so the codebase is clean entering the next milestone
@@ -164,5 +164,5 @@ Plans:
 | 19. Search Gate & Injection | v3.1 | 2/2 | Complete | 2026-04-11 |
 | 20. Fix SRCH-04 — Result Count Param | v3.1 | 1/1 | Complete | 2026-04-11 |
 | 21. inspect Command | v3.2 | 2/2 | Complete | 2026-04-24 |
-| 22. Search Pipeline Spinners | v3.2 | 0/1 | Not started | - |
+| 22. Search Pipeline Spinners | v3.2 | 1/1 | Complete | 2026-04-24 |
 | 23. Cleanup & Correctness | v3.2 | 0/? | Not started | - |

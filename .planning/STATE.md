@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v3.2
 milestone_name: Observability & Polish
 status: in-progress
-stopped_at: Phase 21 Plan 02 complete — Phase 21 done, inspect command wired
-last_updated: "2026-04-24T18:41:41Z"
+stopped_at: Phase 22 Plan 01 complete — spinners wired at all 3 search pipeline wait points
+last_updated: "2026-04-24T19:48:21Z"
 last_activity: 2026-04-24
 progress:
   total_phases: 3
-  completed_phases: 1
-  total_plans: 2
-  completed_plans: 2
-  percent: 33
+  completed_phases: 2
+  total_plans: 3
+  completed_plans: 3
+  percent: 67
 ---
 
 # Project State
@@ -25,13 +25,13 @@ See: .planning/PROJECT.md (updated 2026-04-24)
 
 ## Current Position
 
-Phase: 21 (complete — 2/2 plans complete)
-Plan: 02 (complete)
-Status: Phase 21 complete; ready to execute Phase 22
-Last activity: 2026-04-24 — 21-02 complete (cmd/inspect.go wired to BuildInspectContext with per-stage output)
+Phase: 22 (complete — 1/1 plans complete)
+Plan: 01 (complete)
+Status: Phase 22 complete; ready to execute Phase 23
+Last activity: 2026-04-24 — 22-01 complete (goroutine-based spinners wired at all 3 search pipeline wait points in cmd/search.go)
 
 ```
-Progress: [██░░░░░░░░] 33% (2/2 plans complete in Phase 21; Phase 22 next)
+Progress: [█████░░░░░] 67% (3/3 plans complete across Phases 21-22; Phase 23 next)
 ```
 
 ## Performance Metrics
@@ -61,7 +61,7 @@ Progress: [██░░░░░░░░] 33% (2/2 plans complete in Phase 21; 
 | v3.1 Phase 19 | 2 | Complete |
 | v3.1 Phase 20 | 1 | Complete |
 | v3.2 Phase 21 | 2/2 | Complete |
-| v3.2 Phase 22 | TBD | Not started |
+| v3.2 Phase 22 | 1/1 | Complete |
 | v3.2 Phase 23 | TBD | Not started |
 
 ## Accumulated Context
@@ -95,5 +95,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-04-24
-Stopped at: Phase 21 Plan 02 complete — cmd/inspect.go wired, inspect command fully functional
-Resume: `/gsd-execute-phase 22` (Phase 22: Search Pipeline Spinners)
+Stopped at: Phase 22 Plan 01 complete — spinners wired at all 3 search pipeline wait points in cmd/search.go
+Resume: `/gsd-execute-phase 23` (Phase 23: Cleanup & Correctness)
