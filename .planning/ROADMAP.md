@@ -110,7 +110,7 @@ Full archive: `.planning/milestones/v3.1-ROADMAP.md`
   5. `myhelper inspect --no-context "some query"` exits with a message indicating context was bypassed and skips all retrieval stages
 **Plans**: 2 plans
 Plans:
-- [ ] 21-01-PLAN.md — Extend InspectResult + restore cmd helpers (retrieval.go, cmd/root.go, cmd/helpers.go)
+- [x] 21-01-PLAN.md — Extend InspectResult + restore cmd helpers (retrieval.go, cmd/root.go, cmd/helpers.go)
 - [ ] 21-02-PLAN.md — Create cmd/inspect.go cobra subcommand with formatted diagnostics output
 
 ### Phase 22: Search Pipeline Spinners
@@ -162,6 +162,6 @@ Plans:
 | 18. SearXNG Client | v3.1 | 1/1 | Complete | 2026-04-11 |
 | 19. Search Gate & Injection | v3.1 | 2/2 | Complete | 2026-04-11 |
 | 20. Fix SRCH-04 — Result Count Param | v3.1 | 1/1 | Complete | 2026-04-11 |
-| 21. inspect Command | v3.2 | 0/2 | Not started | - |
+| 21. inspect Command | v3.2 | 1/2 | In progress | - |
 | 22. Search Pipeline Spinners | v3.2 | 0/? | Not started | - |
 | 23. Cleanup & Correctness | v3.2 | 0/? | Not started | - |
