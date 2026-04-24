@@ -6,7 +6,7 @@ A Go CLI that provides fast, local-model-powered chat (`myhelper chat`) with opt
 
 ## Core Value
 
-Get a precise, project-aware answer from a local 7B model by enabling it to navigate a structured map of the codebase—without context bloat or external APIs.
+Fast, local chat with optional web search for current information — powered by a local Ollama model, no external API dependencies required.
 
 ## Current Milestone: v3.2 Observability & Polish
 
@@ -91,14 +91,8 @@ Get a precise, project-aware answer from a local 7B model by enabling it to navi
 - **Codebase state (v3.1)**: ~7,500 LOC Go total (source + tests); includes `internal/search/`, `cmd/search.go` web search pipeline
 - **Tech stack**: Go, cobra, bufio scanner (NDJSON streaming), go-tiktoken, go/ast, JSON-based index, `internal/retrieval` pipeline, SearXNG JSON API
 - **Known tech debt (v3.1)**:
-  - `Symbol.CallEdges`/`TypeRefs` stored but not consumed by retrieval pipeline
-  - `PackageEntry.Responsibility` written to `packages.json` but unused in `llmReRank`
-  - Dual context injection (`context.md` + `proj.Summary`) — same source, redundant tokens
-  - Phase 11 VERIFICATION.md missing — RET-01–06 confirmed by downstream but not formally verified
-  - `inspect` ignores `--no-context` flag
-  - `BuildContext`/`BuildInspectContext` silently discard `llmReRank` error return
-  - `cmd/search.go:countTokens` duplicates `retrieval.tokenCount` helper
-  - SearXNG URL built via string concat — trailing slash on endpoint causes double-slash path
+  - All v3.1 tech debt resolved in Phase 23 (Cleanup & Correctness)
+  - `Symbol.CallEdges`/`TypeRefs` stored but not consumed — documented as reserved for future ranking
 
 ## Constraints
 
@@ -141,4 +135,4 @@ This document evolves at milestone boundaries.
 4. Context + architecture update
 
 ---
-*Last updated: 2026-04-24 — v3.2 Observability & Polish milestone started*
+*Last updated: 2026-04-24 — v3.2 Phase 23 complete; all tech debt resolved*
