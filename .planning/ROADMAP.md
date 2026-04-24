@@ -9,7 +9,7 @@
 - ✅ **v2.0 GSD Plan Executor** — Phases 14-15 (partial; abandoned 2026-04-10)
 - ✅ **v3.0 Simple Chat Wrapper** — Phases 16-17 (shipped 2026-04-11)
 - ✅ **v3.1 Web Search** — Phases 18-20 (shipped 2026-04-11)
-- 🔄 **v3.2 Observability & Polish** — Phases 21-23 (in progress)
+- ✅ **v3.2 Observability & Polish** — Phases 21-23 (shipped 2026-04-24)
 
 ## Phases
 
@@ -94,7 +94,7 @@ Full archive: `.planning/milestones/v3.1-ROADMAP.md`
 
 - [x] **Phase 21: inspect Command** — Wire cmd/inspect.go to BuildInspectContext with per-stage formatted output
 - [x] **Phase 22: Search Pipeline Spinners** — Add goroutine-based spinners for SearXNG fetch, LLM gate, and LLM re-rank (no new dependencies)
-- [ ] **Phase 23: Cleanup & Correctness** — Fix bugs, eliminate dead code, and close dual context injection and microPassFile debt
+- [x] **Phase 23: Cleanup & Correctness** — Fix bugs, eliminate dead code, and close dual context injection and microPassFile debt
 
 ## Phase Details
 
@@ -139,8 +139,8 @@ Plans:
   6. Queries no longer inject both `context.md` content and `proj.Summary` when they carry the same information; token usage for context-heavy queries measurably decreases
 **Plans**: 2 plans
 Plans:
-- [ ] 23-01-PLAN.md — Bug fixes + dead code removal (BUG-01, BUG-02, CLN-01, CLN-02, CLN-03)
-- [ ] 23-02-PLAN.md — microPassFile refactor + PROJECT.md Core Value update (PERF-01, CTX-03)
+- [x] 23-01-PLAN.md — Bug fixes + dead code removal (BUG-01, BUG-02, CLN-01, CLN-02, CLN-03)
+- [x] 23-02-PLAN.md — microPassFile refactor + PROJECT.md Core Value update (PERF-01, CTX-03)
 
 ## Progress
 
@@ -168,4 +168,4 @@ Plans:
 | 20. Fix SRCH-04 — Result Count Param | v3.1 | 1/1 | Complete | 2026-04-11 |
 | 21. inspect Command | v3.2 | 2/2 | Complete | 2026-04-24 |
 | 22. Search Pipeline Spinners | v3.2 | 1/1 | Complete | 2026-04-24 |
-| 23. Cleanup & Correctness | v3.2 | 0/2 | Not started | - |
+| 23. Cleanup & Correctness | v3.2 | 2/2 | Complete | 2026-04-24 |
