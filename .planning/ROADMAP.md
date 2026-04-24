@@ -137,7 +137,10 @@ Plans:
   4. `PackageEntry.Responsibility` is either passed into the `llmReRank` prompt or explicitly removed from the re-rank call; no field is silently populated and never read
   5. `microPassFile` reads `Symbol.Start`/`Symbol.End` from the stored artifact instead of calling `ExtractSymbolMap`; running `inspect` on a large file produces the same line range selection without re-parsing AST
   6. Queries no longer inject both `context.md` content and `proj.Summary` when they carry the same information; token usage for context-heavy queries measurably decreases
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 23-01-PLAN.md — Bug fixes + dead code removal (BUG-01, BUG-02, CLN-01, CLN-02, CLN-03)
+- [ ] 23-02-PLAN.md — microPassFile refactor + PROJECT.md Core Value update (PERF-01, CTX-03)
 
 ## Progress
 
@@ -165,4 +168,4 @@ Plans:
 | 20. Fix SRCH-04 — Result Count Param | v3.1 | 1/1 | Complete | 2026-04-11 |
 | 21. inspect Command | v3.2 | 2/2 | Complete | 2026-04-24 |
 | 22. Search Pipeline Spinners | v3.2 | 1/1 | Complete | 2026-04-24 |
-| 23. Cleanup & Correctness | v3.2 | 0/? | Not started | - |
+| 23. Cleanup & Correctness | v3.2 | 0/2 | Not started | - |
