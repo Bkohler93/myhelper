@@ -148,6 +148,32 @@ func runConversationLoop(
 	}
 }
 
+// resolveInput returns the first positional arg if non-empty, otherwise prompts
+// the user interactively. Used by all query subcommands.
+func resolveInput(args []string, interactivePrompt string) (string, error) {
+	if len(args) > 0 && strings.TrimSpace(args[0]) != "" {
+		return strings.TrimSpace(args[0]), nil
+	}
+	return readInteractive(interactivePrompt)
+}
+
+// readInteractive writes prompt to stderr and reads one line from stdinReader.
+func readInteractive(prompt string) (string, error) {
+	fmt.Fprint(os.Stderr, prompt)
+	sc := bufio.NewScanner(stdinReader)
+	if !sc.Scan() {
+		if err := sc.Err(); err != nil {
+			return "", fmt.Errorf("read input: %w", err)
+		}
+		return "", fmt.Errorf("no input provided")
+	}
+	input := strings.TrimSpace(sc.Text())
+	if input == "" {
+		return "", fmt.Errorf("input cannot be empty")
+	}
+	return input, nil
+}
+
 // summarize compresses history when the token threshold is exceeded.
 // It operates on no-system-prompt history: msgs[0] is always a user message.
 //

@@ -14,11 +14,15 @@ import (
 var (
 	searchForce    bool
 	searchSuppress bool
+	noContextFlag  bool
+	tokenLimitFlag int
 )
 
 func init() {
 	rootCmd.PersistentFlags().BoolVar(&searchForce, "search", false, "Force web search regardless of gate result")
 	rootCmd.PersistentFlags().BoolVar(&searchSuppress, "no-search", false, "Suppress web search entirely")
+	rootCmd.PersistentFlags().BoolVar(&noContextFlag, "no-context", false, "bypass retrieval and inject no project context")
+	rootCmd.PersistentFlags().IntVar(&tokenLimitFlag, "token-limit", 0, "override token threshold for conversation history (default 4100)")
 }
 
 var rootCmd = &cobra.Command{
@@ -51,5 +55,12 @@ func Execute() {
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
+	}
+}
+
+// ApplyFlagOverrides applies CLI flag values to cfg, overriding config-file values.
+func ApplyFlagOverrides(cfg *config.Config) {
+	if tokenLimitFlag != 0 {
+		cfg.TokenThreshold = tokenLimitFlag
 	}
 }
