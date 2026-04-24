@@ -95,7 +95,7 @@ func BuildContext(
 	cfg config.Config,
 	chatFn scanner.ChatFn,
 ) (Context, error) {
-	proj, pkgs, files, syms, err := loadArtifacts(root)
+	proj, _, files, syms, err := loadArtifacts(root)
 	if err != nil {
 		// No artifacts — return bare user query; caller falls back to unaugmented prompt.
 		return Context{Messages: []history.Message{{Role: "user", Content: query}}}, nil
@@ -121,7 +121,10 @@ func BuildContext(
 	candidates = applyTokenCap(candidates, totalBudget, cfg)
 
 	// Stage 3: LLM re-ranking (RET-03)
-	selected, _ := llmReRank(query, candidates, pkgs.Packages, cfg, chatFn)
+	selected, reRankErr := llmReRank(query, candidates, cfg, chatFn)
+	if reRankErr != nil {
+		selected = candidates // fallback: use all candidates on LLM error
+	}
 
 	// Count tokens for the final selected set only (drives expansion budget)
 	usedTokens = 0
@@ -266,7 +269,6 @@ const reRankSystemPrompt = `You are a code search assistant. Given the user's qu
 func llmReRank(
 	query string,
 	candidates []scanner.Symbol,
-	pkgs []scanner.PackageEntry,
 	cfg config.Config,
 	chatFn scanner.ChatFn,
 ) ([]scanner.Symbol, error) {
@@ -789,7 +791,7 @@ func BuildInspectContext(
 	cfg config.Config,
 	chatFn scanner.ChatFn,
 ) (InspectResult, error) {
-	proj, pkgs, files, syms, err := loadArtifacts(root)
+	proj, _, files, syms, err := loadArtifacts(root)
 	if err != nil {
 		// No artifacts — not an error; caller (inspect command) handles the display.
 		return InspectResult{GatePassed: false}, nil
@@ -840,7 +842,10 @@ func BuildInspectContext(
 
 	// Stage 3: LLM re-ranking (RET-03)
 	// Only symbols that survive re-ranking appear in output (per A4 assumption in RESEARCH.md).
-	selected, _ := llmReRank(query, candidates, pkgs.Packages, cfg, chatFn)
+	selected, reRankErr := llmReRank(query, candidates, cfg, chatFn)
+	if reRankErr != nil {
+		selected = candidates // fallback
+	}
 	reRankTokens := 0
 	for _, s := range selected {
 		reRankTokens += tokenCount(cfg, s.Signature)
