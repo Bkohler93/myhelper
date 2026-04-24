@@ -755,14 +755,23 @@ type StageMetrics struct {
 	TokensUsed int
 }
 
+// PreFilterCandidate pairs a symbol with its keyword relevance score from the
+// pre-filter stage. Used by the inspect command to display scores (INSP-03).
+type PreFilterCandidate struct {
+	Symbol scanner.Symbol
+	Score  int
+}
+
 // InspectResult holds per-stage diagnostic output from a dry-run retrieval.
 // It does not contain assembled messages — BuildInspectContext never calls assembleMessages.
 type InspectResult struct {
-	Symbols      []SymbolResult
-	Files        []FileResult
-	StageMetrics []StageMetrics
-	FinalTokens  int
-	GatePassed   bool
+	Symbols             []SymbolResult
+	Files               []FileResult
+	StageMetrics        []StageMetrics
+	FinalTokens         int
+	GatePassed          bool
+	GateAnswer          string               // raw LLM string from relevance gate (INSP-02)
+	PreFilterCandidates []PreFilterCandidate // symbols surviving pre-filter with scores (INSP-03)
 }
 
 // BuildInspectContext runs the retrieval pipeline in dry-run mode and returns
@@ -788,10 +797,25 @@ func BuildInspectContext(
 
 	var result InspectResult
 
-	// Stage 1: Relevance gate (RET-04)
-	result.GatePassed = needsContext(query, proj.Summary, cfg, chatFn)
-	if !result.GatePassed {
-		return result, nil
+	// Stage 1: Relevance gate (RET-04) — inline to capture raw LLM answer (INSP-02)
+	{
+		msg := relevanceGatePrompt + query
+		if proj.Summary != "" {
+			msg = "Project: " + proj.Summary + "\n\n" + msg
+		}
+		messages := []history.Message{
+			{Role: "user", Content: msg},
+		}
+		rawAnswer, err := chatFn(cfg, messages)
+		if err != nil {
+			rawAnswer = ""
+		}
+		result.GateAnswer = strings.TrimSpace(rawAnswer)
+		lower := strings.ToLower(result.GateAnswer)
+		result.GatePassed = !strings.HasPrefix(lower, "no")
+		if !result.GatePassed {
+			return result, nil
+		}
 	}
 
 	// Budget setup (mirrors BuildContext)
@@ -800,9 +824,14 @@ func BuildInspectContext(
 	// Stage 2: Pre-filter (RET-01, RET-02)
 	candidates := preFilter(query, syms.Symbols, files.Files)
 	candidates = applyTokenCap(candidates, totalBudget, cfg)
+	queryTerms := strings.Fields(strings.ToLower(query))
 	preFilterTokens := 0
 	for _, c := range candidates {
 		preFilterTokens += tokenCount(cfg, c.Signature)
+		result.PreFilterCandidates = append(result.PreFilterCandidates, PreFilterCandidate{
+			Symbol: c,
+			Score:  scoreSymbol(c, queryTerms),
+		})
 	}
 	result.StageMetrics = append(result.StageMetrics, StageMetrics{
 		Name:       "pre-filter",

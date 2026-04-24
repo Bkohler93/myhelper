@@ -9,6 +9,7 @@
 - ✅ **v2.0 GSD Plan Executor** — Phases 14-15 (partial; abandoned 2026-04-10)
 - ✅ **v3.0 Simple Chat Wrapper** — Phases 16-17 (shipped 2026-04-11)
 - ✅ **v3.1 Web Search** — Phases 18-20 (shipped 2026-04-11)
+- 🔄 **v3.2 Observability & Polish** — Phases 21-23 (in progress)
 
 ## Phases
 
@@ -47,7 +48,7 @@ Full archive: `.planning/milestones/v1.2-ROADMAP.md`
 <details>
 <summary>✅ v1.3 Structured Code Intelligence (Phases 9-13) — SHIPPED 2026-04-10</summary>
 
-- [x] Phase 9: Extended AST & Symbol Extraction (2/2 plans) — completed 2026-04-09
+- [x] Phase 9: Extended AST & Symbol Extension (2/2 plans) — completed 2026-04-09
 - [x] Phase 10: Hierarchical Index Artifacts (2/2 plans) — completed 2026-04-09
 - [x] Phase 11: Retrieval Package (1/1 plan) — completed 2026-04-10
 - [x] Phase 12: Adaptive Context Builder & Strategies (3/3 plans) — completed 2026-04-10
@@ -89,6 +90,54 @@ Full archive: `.planning/milestones/v3.1-ROADMAP.md`
 
 </details>
 
+### v3.2 Observability & Polish
+
+- [ ] **Phase 21: inspect Command** — Wire cmd/inspect.go to BuildInspectContext with per-stage formatted output
+- [ ] **Phase 22: Search Pipeline Spinners** — Add Bubble Tea loading spinners for SearXNG fetch, LLM gate, and LLM re-rank
+- [ ] **Phase 23: Cleanup & Correctness** — Fix bugs, eliminate dead code, and close dual context injection and microPassFile debt
+
+## Phase Details
+
+### Phase 21: inspect Command
+**Goal**: Users can run `myhelper inspect <query>` to see exactly which symbols and files the retrieval pipeline would select, and why, without triggering a model response
+**Depends on**: Phase 20 (v3.1 complete)
+**Requirements**: INSP-01, INSP-02, INSP-03, INSP-04, INSP-05
+**Success Criteria** (what must be TRUE):
+  1. `myhelper inspect "some query"` executes without error and prints per-stage diagnostics to stdout
+  2. Output shows the relevance gate decision (pass/fail) and the raw LLM answer that produced it
+  3. Output lists pre-filter candidates with their keyword scores (INSP-03 requires PreFilterCandidates added to InspectResult)
+  4. Output distinguishes symbols that survived LLM re-ranking from those that were dropped
+  5. `myhelper inspect --no-context "some query"` exits with a message indicating context was bypassed and skips all retrieval stages
+**Plans**: 2 plans
+Plans:
+- [ ] 21-01-PLAN.md — Extend InspectResult + restore cmd helpers (retrieval.go, cmd/root.go, cmd/helpers.go)
+- [ ] 21-02-PLAN.md — Create cmd/inspect.go cobra subcommand with formatted diagnostics output
+
+### Phase 22: Search Pipeline Spinners
+**Goal**: Users see a Bubble Tea loading spinner during each async wait in the search pipeline so the tool feels responsive instead of silently blocking
+**Depends on**: Phase 21
+**Requirements**: UX-01, UX-02, UX-03
+**Success Criteria** (what must be TRUE):
+  1. A spinner appears in the terminal while SearXNG is fetching results and clears when the fetch completes
+  2. A spinner appears while the LLM gate call is running and clears when the yes/no decision is returned
+  3. A spinner appears while the LLM re-rank call is running and clears when re-ranking completes
+  4. Spinner behavior follows the existing RunWithSpinner pattern used by init/sync in cmd/helpers.go (no new Bubble Tea primitives introduced)
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 23: Cleanup & Correctness
+**Goal**: All known v3.1 tech debt is eliminated — bugs fixed, duplicate code removed, and dormant fields either wired or documented — so the codebase is clean entering the next milestone
+**Depends on**: Phase 22
+**Requirements**: BUG-01, BUG-02, CLN-01, CLN-02, CLN-03, CTX-03, PERF-01
+**Success Criteria** (what must be TRUE):
+  1. A SearXNG endpoint configured with a trailing slash (e.g. `http://host/`) produces a valid URL with no double-slash in the path
+  2. When `llmReRank` returns an error, `BuildContext` and `BuildInspectContext` surface it to the caller rather than silently discarding it
+  3. `cmd/search.go` contains no `countTokens` function; all token-counting in the search path goes through the shared retrieval package helper
+  4. `PackageEntry.Responsibility` is either passed into the `llmReRank` prompt or explicitly removed from the re-rank call; no field is silently populated and never read
+  5. `microPassFile` reads `Symbol.Start`/`Symbol.End` from the stored artifact instead of calling `ExtractSymbolMap`; running `inspect` on a large file produces the same line range selection without re-parsing AST
+  6. Queries no longer inject both `context.md` content and `proj.Summary` when they carry the same information; token usage for context-heavy queries measurably decreases
+**Plans**: TBD
+
 ## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
@@ -112,4 +161,7 @@ Full archive: `.planning/milestones/v3.1-ROADMAP.md`
 | 17. Chat Entry Point | v3.0 | 1/1 | Complete | 2026-04-11 |
 | 18. SearXNG Client | v3.1 | 1/1 | Complete | 2026-04-11 |
 | 19. Search Gate & Injection | v3.1 | 2/2 | Complete | 2026-04-11 |
-| 20. Fix SRCH-04 — Result Count Param | v3.1 | 1/1 | Complete   | 2026-04-11 |
+| 20. Fix SRCH-04 — Result Count Param | v3.1 | 1/1 | Complete | 2026-04-11 |
+| 21. inspect Command | v3.2 | 0/2 | Not started | - |
+| 22. Search Pipeline Spinners | v3.2 | 0/? | Not started | - |
+| 23. Cleanup & Correctness | v3.2 | 0/? | Not started | - |

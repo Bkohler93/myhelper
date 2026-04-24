@@ -8,6 +8,18 @@ A Go CLI that provides fast, local-model-powered chat (`myhelper chat`) with opt
 
 Get a precise, project-aware answer from a local 7B model by enabling it to navigate a structured map of the codebase—without context bloat or external APIs.
 
+## Current Milestone: v3.2 Observability & Polish
+
+**Goal:** Wire the inspect command, add Bubble Tea spinners for async waits, and eliminate all known tech debt.
+
+**Target features:**
+- `inspect` command — wire `cmd/inspect.go` to `BuildInspectContext`; per-stage formatted output with `--no-context` support
+- Loading spinners (Bubble Tea) — SearXNG fetch, LLM gate call, LLM re-rank call
+- Bug fixes — double-slash SearXNG URL, silent `llmReRank` error discard
+- Dead code removal — unused `CallEdges`/`TypeRefs`, `PackageEntry.Responsibility`, `countTokens` duplicate
+- Dual context injection fix — eliminate redundancy between `context.md` and `proj.Summary`
+- Runtime perf — `microPassFile` uses stored `Symbol.Start/End` instead of re-parsing AST
+
 ## Requirements
 
 ### Validated
@@ -50,7 +62,13 @@ Get a precise, project-aware answer from a local 7B model by enabling it to navi
 
 ### Active
 
-(None — planning next milestone)
+- [ ] `inspect` command — wire `cmd/inspect.go` to `BuildInspectContext`; per-stage output with `--no-context` support
+- [ ] Loading spinners (Bubble Tea) — SearXNG fetch, LLM gate call, LLM re-rank call
+- [ ] Double-slash SearXNG URL bug fix
+- [ ] Silent `llmReRank` error discard fix
+- [ ] Dead code removal — unused `CallEdges`/`TypeRefs`, `PackageEntry.Responsibility`, `countTokens` duplicate
+- [ ] Dual context injection fix — eliminate `context.md` + `proj.Summary` redundancy
+- [ ] `microPassFile` perf — use stored `Symbol.Start/End` instead of re-parsing AST
 
 ### Out of Scope
 
@@ -123,4 +141,4 @@ This document evolves at milestone boundaries.
 4. Context + architecture update
 
 ---
-*Last updated: 2026-04-11 after v3.1 Web Search milestone complete*
+*Last updated: 2026-04-24 — v3.2 Observability & Polish milestone started*
