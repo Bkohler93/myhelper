@@ -107,7 +107,7 @@ func buildWebBlock(results []search.Result, budgetTokens int, cfg config.Config)
 	}
 	header := "[WEB RESULTS]\n"
 	footer := "[/WEB RESULTS]\n\n"
-	overhead := countTokens(header+footer, cfg)
+	overhead := history.New(cfg.TokenThreshold, []history.Message{{Role: "user", Content: header + footer}}).TokenCount()
 	if overhead >= budgetTokens {
 		return ""
 	}
@@ -115,7 +115,7 @@ func buildWebBlock(results []search.Result, budgetTokens int, cfg config.Config)
 	used := overhead
 	for i, r := range results {
 		entry := fmt.Sprintf("[%d] %s\n%s\n%s\n\n", i+1, r.Title, r.URL, r.Snippet)
-		cost := countTokens(entry, cfg)
+		cost := history.New(cfg.TokenThreshold, []history.Message{{Role: "user", Content: entry}}).TokenCount()
 		if used+cost > budgetTokens {
 			break
 		}
@@ -128,10 +128,6 @@ func buildWebBlock(results []search.Result, budgetTokens int, cfg config.Config)
 	return header + sb.String() + footer
 }
 
-// countTokens mirrors the retrieval.tokenCount helper.
-func countTokens(s string, cfg config.Config) int {
-	return history.New(cfg.TokenThreshold, []history.Message{{Role: "user", Content: s}}).TokenCount()
-}
 
 // buildUserMessage augments the user query with a [WEB RESULTS] block if appropriate.
 // Returns the original query unchanged when search is skipped.

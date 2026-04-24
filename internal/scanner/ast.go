@@ -132,8 +132,8 @@ type Symbol struct {
 	Receiver  string   `json:"receiver"`  // empty for non-methods
 	StableID  string   `json:"stableID"`  // "<pkg>.<Name>" or "<pkg>.<Recv>.<Name>"
 	Imports   []string `json:"imports"`   // file-level import paths (same value for all symbols in a file)
-	CallEdges []string `json:"callEdges"` // populated by Phase 10 body-walking pass
-	TypeRefs  []string `json:"typeRefs"`  // populated by Phase 10 body-walking pass
+	CallEdges []string `json:"callEdges"` // reserved for future call-graph-aware ranking
+	TypeRefs  []string `json:"typeRefs"`  // reserved for future type-aware ranking
 	FilePath  string   `json:"filePath"`  // relative path to the source file
 }
 

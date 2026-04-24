@@ -140,7 +140,7 @@ func TestRerank_EmptyInput(t *testing.T) {
 		return "some.StableID", nil
 	}
 
-	result, err := llmReRank("query", []scanner.Symbol{}, nil, testCfg, countingChatFn)
+	result, err := llmReRank("query", []scanner.Symbol{}, testCfg, countingChatFn)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -158,7 +158,7 @@ func TestRerank_Fallback(t *testing.T) {
 		makeSymbol("Beta", "pkg.Beta", "func Beta()", "internal/pkg/beta.go"),
 	}
 
-	result, err := llmReRank("query", syms, nil, testCfg, failingChatFn)
+	result, err := llmReRank("query", syms, testCfg, failingChatFn)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -175,7 +175,7 @@ func TestRerank_FiltersByStableID(t *testing.T) {
 	}
 
 	// chatFn returns only "pkg.Alpha" — only that symbol should be selected
-	result, err := llmReRank("query", syms, nil, testCfg, makeFakeChatFn("pkg.Alpha"))
+	result, err := llmReRank("query", syms, testCfg, makeFakeChatFn("pkg.Alpha"))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
