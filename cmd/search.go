@@ -141,18 +141,24 @@ func buildUserMessage(query string, cfg config.Config, searchCfg search.Config, 
 
 	doSearch := forceSearch // GATE-03: --search forces gate=true
 	if !doSearch {
+		sp1 := startSpinner("Checking if web search is needed...")
 		doSearch = searchGate(query, cfg) // GATE-01/GATE-02
+		sp1.done()
 	}
 	if !doSearch {
 		return query
 	}
 
+	sp2 := startSpinner("Fetching web results...")
 	results, err := search.Search(query, searchCfg)
+	sp2.done()
 	if err != nil || len(results) == 0 {
 		return query // network/empty: degrade gracefully
 	}
 
+	sp3 := startSpinner("Filtering results...")
 	ranked, _ := reRankResults(query, results, cfg)
+	sp3.done()
 	if ranked == nil {
 		return query // RANK-03: zero relevant results → skip injection
 	}
