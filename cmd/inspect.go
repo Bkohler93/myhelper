@@ -48,8 +48,7 @@ func runInspect(cmd *cobra.Command, args []string) error {
 	// Detect missing artifacts: BuildInspectContext returns GatePassed:false with empty
 	// GateAnswer when .myhelper/ artifacts do not exist (no gate call was made).
 	if !result.GatePassed && result.GateAnswer == "" {
-		fmt.Fprintln(os.Stderr, "No .myhelper/ artifacts found. Run `myhelper init` first.")
-		os.Exit(1)
+		return fmt.Errorf("no .myhelper/ artifacts found — run `myhelper init` first")
 	}
 
 	printInspectResult(result, input)
