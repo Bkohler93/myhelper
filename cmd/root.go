@@ -33,6 +33,7 @@ var rootCmd = &cobra.Command{
 	Args:              cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg := config.Load()
+		ApplyFlagOverrides(&cfg)
 		searchCfg := search.LoadConfig() // load once, capture in closure (Pitfall 6)
 		hist := history.New(cfg.TokenThreshold, nil)
 
