@@ -2,14 +2,41 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/bkohler93/myhelper/internal/config"
 	"github.com/bkohler93/myhelper/internal/history"
 	"github.com/bkohler93/myhelper/internal/ollama"
 	"github.com/bkohler93/myhelper/internal/search"
 )
+
+type spinner struct{ stop chan struct{} }
+
+func startSpinner(label string) *spinner {
+	s := &spinner{stop: make(chan struct{})}
+	go func() {
+		frames := []rune{'|', '/', '-', '\\'}
+		i := 0
+		t := time.NewTicker(100 * time.Millisecond)
+		defer t.Stop()
+		for {
+			fmt.Fprintf(os.Stderr, "\r%c %s", frames[i], label)
+			i = (i + 1) % len(frames)
+			select {
+			case <-s.stop:
+				fmt.Fprintf(os.Stderr, "\r%s\r", strings.Repeat(" ", len(label)+3))
+				return
+			case <-t.C:
+			}
+		}
+	}()
+	return s
+}
+
+func (s *spinner) done() { close(s.stop) }
 
 const searchGatePrompt = `Answer only "yes" or "no". Would the following query benefit from retrieving current or real-time information from the internet? Query: `
 
