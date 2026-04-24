@@ -695,9 +695,17 @@ func microPassFile(root, path, query string, cfg config.Config, chatFn scanner.C
 		}
 
 		// Build symbol map text from stored symbols (D-01, D-02).
+		// Skip symbols with zero Start/End — stale or incomplete index entries
+		// would produce misleading "lines 0-0" in the prompt.
 		var mapSB strings.Builder
 		for _, sym := range relevantSyms {
-			fmt.Fprintf(&mapSB, "%s: lines %d-%d\n", sym.Name, sym.Start, sym.End)
+			if sym.Start > 0 && sym.End >= sym.Start {
+				fmt.Fprintf(&mapSB, "%s: lines %d-%d\n", sym.Name, sym.Start, sym.End)
+			}
+		}
+		// If all stored symbols had zero line numbers, fall through to truncation.
+		if mapSB.Len() == 0 {
+			return "", false
 		}
 
 		// Compose micro-pass messages (D-03, D-04).
