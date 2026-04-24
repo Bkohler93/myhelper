@@ -84,11 +84,13 @@ func reRankResults(query string, results []search.Result, cfg config.Config) ([]
 
 // filterByIndices parses integer indices from the LLM response and returns the matching results.
 func filterByIndices(results []search.Result, response string) []search.Result {
+	seen := make(map[int]bool)
 	var selected []search.Result
 	for _, field := range strings.Fields(response) {
 		cleaned := strings.Trim(field, "[]().,")
 		if idx, err := strconv.Atoi(cleaned); err == nil {
-			if idx >= 1 && idx <= len(results) {
+			if idx >= 1 && idx <= len(results) && !seen[idx] {
+				seen[idx] = true
 				selected = append(selected, results[idx-1])
 			}
 		}
