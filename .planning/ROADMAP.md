@@ -92,7 +92,7 @@ Full archive: `.planning/milestones/v3.1-ROADMAP.md`
 
 ### v3.2 Observability & Polish
 
-- [ ] **Phase 21: inspect Command** — Wire cmd/inspect.go to BuildInspectContext with per-stage formatted output
+- [x] **Phase 21: inspect Command** — Wire cmd/inspect.go to BuildInspectContext with per-stage formatted output
 - [ ] **Phase 22: Search Pipeline Spinners** — Add Bubble Tea loading spinners for SearXNG fetch, LLM gate, and LLM re-rank
 - [ ] **Phase 23: Cleanup & Correctness** — Fix bugs, eliminate dead code, and close dual context injection and microPassFile debt
 
@@ -111,7 +111,7 @@ Full archive: `.planning/milestones/v3.1-ROADMAP.md`
 **Plans**: 2 plans
 Plans:
 - [x] 21-01-PLAN.md — Extend InspectResult + restore cmd helpers (retrieval.go, cmd/root.go, cmd/helpers.go)
-- [ ] 21-02-PLAN.md — Create cmd/inspect.go cobra subcommand with formatted diagnostics output
+- [x] 21-02-PLAN.md — Create cmd/inspect.go cobra subcommand with formatted diagnostics output
 
 ### Phase 22: Search Pipeline Spinners
 **Goal**: Users see a Bubble Tea loading spinner during each async wait in the search pipeline so the tool feels responsive instead of silently blocking
@@ -162,6 +162,6 @@ Plans:
 | 18. SearXNG Client | v3.1 | 1/1 | Complete | 2026-04-11 |
 | 19. Search Gate & Injection | v3.1 | 2/2 | Complete | 2026-04-11 |
 | 20. Fix SRCH-04 — Result Count Param | v3.1 | 1/1 | Complete | 2026-04-11 |
-| 21. inspect Command | v3.2 | 1/2 | In progress | - |
+| 21. inspect Command | v3.2 | 2/2 | Complete | 2026-04-24 |
 | 22. Search Pipeline Spinners | v3.2 | 0/? | Not started | - |
 | 23. Cleanup & Correctness | v3.2 | 0/? | Not started | - |

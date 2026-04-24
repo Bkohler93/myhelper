@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v3.2
 milestone_name: Observability & Polish
 status: in-progress
-stopped_at: Phase 21 Plan 01 complete — ready for Plan 02
-last_updated: "2026-04-24T00:00:00.000Z"
+stopped_at: Phase 21 Plan 02 complete — Phase 21 done, inspect command wired
+last_updated: "2026-04-24T18:41:41Z"
 last_activity: 2026-04-24
 progress:
   total_phases: 3
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 2
-  completed_plans: 1
-  percent: 17
+  completed_plans: 2
+  percent: 33
 ---
 
 # Project State
@@ -25,13 +25,13 @@ See: .planning/PROJECT.md (updated 2026-04-24)
 
 ## Current Position
 
-Phase: 21 (in progress — 1/2 plans complete)
-Plan: 02
-Status: Phase 21 Plan 01 complete; ready to execute Plan 02
-Last activity: 2026-04-24 — 21-01 complete (PreFilterCandidate, InspectResult extensions, cmd helpers restored)
+Phase: 21 (complete — 2/2 plans complete)
+Plan: 02 (complete)
+Status: Phase 21 complete; ready to execute Phase 22
+Last activity: 2026-04-24 — 21-02 complete (cmd/inspect.go wired to BuildInspectContext with per-stage output)
 
 ```
-Progress: [█░░░░░░░░░] 17% (1/2 plans complete in Phase 21)
+Progress: [██░░░░░░░░] 33% (2/2 plans complete in Phase 21; Phase 22 next)
 ```
 
 ## Performance Metrics
@@ -60,7 +60,7 @@ Progress: [█░░░░░░░░░] 17% (1/2 plans complete in Phase 21)
 | v3.1 Phase 18 | 1 | Complete |
 | v3.1 Phase 19 | 2 | Complete |
 | v3.1 Phase 20 | 1 | Complete |
-| v3.2 Phase 21 | TBD | Not started |
+| v3.2 Phase 21 | 2/2 | Complete |
 | v3.2 Phase 22 | TBD | Not started |
 | v3.2 Phase 23 | TBD | Not started |
 
@@ -95,5 +95,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-04-24
-Stopped at: Phase 21 Plan 01 complete — PreFilterCandidate, InspectResult extensions, cmd helpers restored
-Resume: `/gsd-execute-phase 21` (Plan 02)
+Stopped at: Phase 21 Plan 02 complete — cmd/inspect.go wired, inspect command fully functional
+Resume: `/gsd-execute-phase 22` (Phase 22: Search Pipeline Spinners)

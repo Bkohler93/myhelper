@@ -1,98 +1,63 @@
-# Requirements: myhelper
+# Requirements — v3.2 Observability & Polish
 
-**Defined:** 2026-04-10
-**Core Value:** Fast, language-agnostic chat with a local 7B model — ask anything, get an answer, with optional web search for current information.
+*Created: 2026-04-24*
 
-## v3.1 Requirements
+---
 
-Requirements for the Web Search milestone.
+## v3.2 Requirements
 
-### Search Client
+### INSP — inspect command
 
-- [ ] **SRCH-01**: `internal/search` package exposes a `Search(query string, cfg Config) ([]Result, error)` function that queries the SearXNG JSON API and returns structured results
-- [ ] **SRCH-02**: Each `Result` contains at minimum: `Title`, `URL`, `Snippet` (content excerpt)
-- [ ] **SRCH-03**: SearXNG endpoint is configurable via `MYHELPER_SEARCH_ENDPOINT` env var, `.myhelper/config.json`, and `~/.config/myhelper/config.json` (default: `http://192.168.0.9:8083`)
-- [ ] **SRCH-04**: `Search` fetches 8–10 results per query from SearXNG's `/search?q=...&format=json` endpoint
-- [ ] **SRCH-05**: Network errors and non-200 responses return an error; the caller decides whether to proceed without search results
+- [x] **INSP-01**: User can run `myhelper inspect <query>` to see per-stage retrieval diagnostics without sending a model response
+- [x] **INSP-02**: `inspect` output shows relevance gate decision (pass / fail + raw LLM answer)
+- [x] **INSP-03**: `inspect` output shows how many symbols passed the pre-filter stage and lists them with scores
+- [x] **INSP-04**: `inspect` output shows which symbols survived LLM re-ranking vs which were dropped
+- [x] **INSP-05**: `inspect` respects `--no-context` flag (skips all retrieval stages, shows that context was bypassed)
 
-### Search Gate
+### UX — loading spinners
 
-- [ ] **GATE-01**: Before responding, a yes/no LLM call determines whether the query needs current or real-time information — returns `true` (search needed) or `false` (skip search)
-- [ ] **GATE-02**: Gate fails open — if the gate call errors, search is skipped (not triggered)
-- [ ] **GATE-03**: `--search` flag forces search on, bypassing the gate
-- [ ] **GATE-04**: `--no-search` flag suppresses search entirely, bypassing the gate
+- [ ] **UX-01**: A Bubble Tea spinner is shown while SearXNG fetches results; disappears when fetch completes
+- [ ] **UX-02**: A Bubble Tea spinner is shown while the LLM search-gate call runs; disappears when decision is made
+- [ ] **UX-03**: A Bubble Tea spinner is shown while the LLM re-rank call runs; disappears when re-ranking completes
 
-### Result Re-ranking
+### BUG — correctness fixes
 
-- [ ] **RANK-01**: When search is triggered, a second LLM call filters the fetched results — model returns the indices/IDs of results that are genuinely relevant to the query
-- [ ] **RANK-02**: Re-rank fails gracefully — if the call errors or returns no valid indices, all fetched results are injected (unfiltered fallback)
-- [ ] **RANK-03**: If re-rank returns zero relevant results, search context is omitted entirely and the model answers from its own knowledge
+- [ ] **BUG-01**: SearXNG URL construction tolerates a trailing slash on the configured endpoint (no double-slash in path)
+- [ ] **BUG-02**: `BuildContext` and `BuildInspectContext` surface the `llmReRank` error instead of silently discarding it
 
-### Context Injection
+### CLN — dead code removal
 
-- [ ] **INJ-01**: Surviving result snippets are injected as a clearly delimited block (e.g., `[WEB RESULTS]`) in the user message before the model responds
-- [ ] **INJ-02**: Injected results are token-budget-aware — snippets are truncated or dropped to fit within the configured token limit
-- [ ] **INJ-03**: The injected block includes title and URL alongside each snippet so the model can attribute sources
+- [ ] **CLN-01**: `cmd/search.go:countTokens` removed; its callers redirected to the shared `retrieval` package helper
+- [ ] **CLN-02**: `PackageEntry.Responsibility` either wired into `llmReRank` as context or removed from the re-rank pass; no unused field silently ignored
+- [ ] **CLN-03**: `Symbol.CallEdges` and `Symbol.TypeRefs` documented as reserved-for-future-use in code; no active removal from schema (avoids breaking existing `.myhelper/` directories)
 
-## Deferred
+### CTX — context injection fix
 
-| Feature | Status |
-|---------|--------|
-| `qwen2.5vl:7b` vision model integration | Deferred to later milestone |
-| `execute` command — GSD plan executor | Deferred indefinitely |
-| Contract accumulation, patch generation | Deferred indefinitely |
-| Project-aware retrieval pipeline | Dormant (code exists, not wired) |
+- [ ] **CTX-03**: Dual context injection fixed — `context.md` content and `proj.Summary` not both injected when they are the same data; one source of truth used per query
+
+### PERF — performance
+
+- [ ] **PERF-01**: `microPassFile` uses the stored `Symbol.Start` / `Symbol.End` line numbers from the artifact instead of re-parsing AST via `ExtractSymbolMap` at runtime
+
+---
+
+## Future Requirements
+
+- `Symbol.CallEdges` / `Symbol.TypeRefs` actively consumed by retrieval pipeline for call-graph-aware ranking (SYM-05, SYM-06) — deferred until retrieval quality warrants the complexity
+- Phase 11 VERIFICATION.md — formal verification of RET-01–06 — deferred (covered by downstream phases and 13 unit tests)
 
 ## Out of Scope
 
-| Feature | Reason |
-|---------|--------|
-| Caching search results across sessions | Adds complexity; freshness is the point of web search |
-| Showing search results to user before model responds | Adds latency and UI complexity; results are context, not output |
-| Configuring number of results per query at runtime | Default 8–10 is sufficient; keep CLI surface small |
-| Image search / VL model | Deferred milestone |
-| Multiple search engine backends | SearXNG aggregates already; no need for additional backends |
+- New commands beyond `inspect` — no additional commands in this milestone
+- Changing the `.myhelper/` artifact schema in a breaking way — CLN-03 explicitly avoids this
+- Persistent logging / log files — inline spinners and `inspect` output cover observability needs
+
+---
 
 ## Traceability
 
-| Requirement | Phase | Status |
-|-------------|-------|--------|
-| SRCH-01 | Phase 18 | Pending |
-| SRCH-02 | Phase 18 | Pending |
-| SRCH-03 | Phase 18 | Pending |
-| SRCH-04 | Phase 20 | Pending |
-| SRCH-05 | Phase 18 | Pending |
-| GATE-01 | Phase 19 | Pending |
-| GATE-02 | Phase 19 | Pending |
-| GATE-03 | Phase 19 | Pending |
-| GATE-04 | Phase 19 | Pending |
-| RANK-01 | Phase 19 | Pending |
-| RANK-02 | Phase 19 | Pending |
-| RANK-03 | Phase 19 | Pending |
-| INJ-01 | Phase 19 | Pending |
-| INJ-02 | Phase 19 | Pending |
-| INJ-03 | Phase 19 | Pending |
-
-**Coverage:**
-- v3.1 requirements: 15 total
-- Mapped to phases: 15
-- Unmapped: 0
-
----
-*Requirements defined: 2026-04-11*
-*Last updated: 2026-04-11 — v3.1 Web Search requirements*
-
-## v3.0 Requirements (Completed)
-
-### Chat Interface
-
-- [x] **CHAT-01**: `myhelper` with no args starts a multi-turn interactive REPL — user types questions, model streams responses, session continues until "quit" or Ctrl+C
-- [x] **CHAT-02**: `myhelper "question"` sends a single one-shot question, streams the response to stdout, and exits
-- [x] **CHAT-03**: REPL maintains conversation history across turns (no re-sending the full transcript — uses existing `history.Message` slice)
-- [x] **CHAT-04**: No system prompt by default — model responds to whatever the user types, language-agnostic
-- [x] **CHAT-05**: History is summarized via non-streaming Ollama call when token count exceeds threshold; session continues uninterrupted after summarization
-- [x] **CHAT-06**: Ollama endpoint and model remain configurable via `MYHELPER_ENDPOINT`, `MYHELPER_MODEL` env vars and `.myhelper/config.json` / `~/.config/myhelper/config.json`
-
-### CLI Cleanup
-
-- [x] **CLEANUP-01**: All existing subcommands (`starter`, `plan`, `lookup`, `pattern`, `inspect`, `init`, `sync`) removed from the cobra command tree — internal packages remain in the codebase
+| Phase | Requirements |
+|-------|-------------|
+| 21 — inspect Command | INSP-01, INSP-02, INSP-03, INSP-04, INSP-05 |
+| 22 — Search Pipeline Spinners | UX-01, UX-02, UX-03 |
+| 23 — Cleanup & Correctness | BUG-01, BUG-02, CLN-01, CLN-02, CLN-03, CTX-03, PERF-01 |
