@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v3.2
 milestone_name: Observability & Polish
 status: in-progress
-stopped_at: Phase 22 Plan 01 complete — spinners wired at all 3 search pipeline wait points
-last_updated: "2026-04-24T19:48:21Z"
+stopped_at: Phase 23 Plan 01 complete — BUG-01, BUG-02, CLN-01, CLN-02, CLN-03 fixed
+last_updated: "2026-04-24T00:48:34Z"
 last_activity: 2026-04-24
 progress:
   total_phases: 3
-  completed_phases: 2
-  total_plans: 3
-  completed_plans: 3
-  percent: 67
+  completed_phases: 3
+  total_plans: 4
+  completed_plans: 4
+  percent: 100
 ---
 
 # Project State
@@ -25,13 +25,13 @@ See: .planning/PROJECT.md (updated 2026-04-24)
 
 ## Current Position
 
-Phase: 22 (complete — 1/1 plans complete)
+Phase: 23 (complete — 1/1 plans complete)
 Plan: 01 (complete)
-Status: Phase 22 complete; ready to execute Phase 23
-Last activity: 2026-04-24 — 22-01 complete (goroutine-based spinners wired at all 3 search pipeline wait points in cmd/search.go)
+Status: Phase 23 complete; v3.2 Observability & Polish milestone ready for closure
+Last activity: 2026-04-24 — 23-01 complete (BUG-01 trailing slash, BUG-02 llmReRank error surfacing, CLN-01 countTokens deleted, CLN-02 pkgs param removed, CLN-03 reserved comments)
 
 ```
-Progress: [█████░░░░░] 67% (3/3 plans complete across Phases 21-22; Phase 23 next)
+Progress: [██████████] 100% (4/4 plans complete across Phases 21-23)
 ```
 
 ## Performance Metrics
@@ -62,7 +62,7 @@ Progress: [█████░░░░░] 67% (3/3 plans complete across Phases
 | v3.1 Phase 20 | 1 | Complete |
 | v3.2 Phase 21 | 2/2 | Complete |
 | v3.2 Phase 22 | 1/1 | Complete |
-| v3.2 Phase 23 | TBD | Not started |
+| v3.2 Phase 23 | 1/1 | Complete |
 
 ## Accumulated Context
 
@@ -95,5 +95,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-04-24
-Stopped at: Phase 22 Plan 01 complete — spinners wired at all 3 search pipeline wait points in cmd/search.go
-Resume: `/gsd-execute-phase 23` (Phase 23: Cleanup & Correctness)
+Stopped at: Phase 23 Plan 01 complete — all 5 requirements satisfied (BUG-01, BUG-02, CLN-01, CLN-02, CLN-03)
+Resume: v3.2 milestone complete; run `/gsd-complete-milestone` to close out
