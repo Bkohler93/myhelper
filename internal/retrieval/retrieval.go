@@ -530,7 +530,7 @@ func assembleMessages(
 				usedTokens += rawCost
 				hasContext = true
 			} else {
-				if content, ok := microPassFile(root, fp, query, cfg, chatFn, remaining); ok {
+				if content, ok := microPassFile(root, fp, query, cfg, chatFn, remaining, symbols); ok {
 					sb.WriteString(fmt.Sprintf("#### %s (partial)\n\n```go\n%s\n```\n\n", fp, content))
 					usedTokens += tokenCount(cfg, content)
 					hasContext = true
@@ -615,7 +615,9 @@ var microPassRe = regexp.MustCompile(`(\d+)-(\d+)`)
 // to answer the query, then extracts and returns those lines.
 //
 // Fallback chain (per D-10):
-//  1. Build symbol map via scanner.ExtractSymbolMap.
+//  1. Filter stored symbols to those belonging to this file; build symbol map.
+//     If no stored symbols match (e.g. file not in index), fall back to
+//     scanner.ExtractSymbolMap to re-parse the AST.
 //  2. Call chatFn with symbol map + query; parse "N-M" response.
 //  3. If parse succeeds and extracted range fits budget: return extracted lines.
 //  4. Otherwise: truncate raw content at last newline that fits budget.
@@ -623,7 +625,8 @@ var microPassRe = regexp.MustCompile(`(\d+)-(\d+)`)
 //
 // Never panics. Never surfaces an error to the user (per D-06, D-09).
 // root is the project root; path is relative to root.
-func microPassFile(root, path, query string, cfg config.Config, chatFn scanner.ChatFn, budget int) (string, bool) {
+// symbols is the slice of stored scanner.Symbol values from the retrieval pipeline.
+func microPassFile(root, path, query string, cfg config.Config, chatFn scanner.ChatFn, budget int, symbols []scanner.Symbol) (string, bool) {
 	if budget <= 0 {
 		return "", false
 	}
@@ -639,14 +642,61 @@ func microPassFile(root, path, query string, cfg config.Config, chatFn scanner.C
 
 	// Attempt micro-pass: build symbol map and ask the model for a line range.
 	extracted, ok := func() (string, bool) {
-		symbols, err := scanner.ExtractSymbolMap(absPath)
-		if err != nil {
-			return "", false
+		// Filter stored symbols to those belonging to this file.
+		var relevantSyms []scanner.Symbol
+		for _, s := range symbols {
+			if s.FilePath == path {
+				relevantSyms = append(relevantSyms, s)
+			}
 		}
 
-		// Build symbol map text (D-01, D-02).
+		// Fallback: re-parse AST if no stored symbols match (e.g. file not in index).
+		if len(relevantSyms) == 0 {
+			extracted, err := scanner.ExtractSymbolMap(absPath)
+			if err != nil {
+				return "", false
+			}
+			var mapSB strings.Builder
+			for _, sym := range extracted {
+				fmt.Fprintf(&mapSB, "%s: lines %d-%d\n", sym.Name, sym.Start, sym.End)
+			}
+			systemPrompt := "Given this file's symbol map, output ONLY the line range needed to answer the user's request. Format: start-end (e.g., 12-55). Output nothing else."
+			userMsg := fmt.Sprintf("Symbols in %s:\n%s\nUser request: %s", path, mapSB.String(), query)
+			microMessages := []history.Message{
+				{Role: "system", Content: systemPrompt},
+				{Role: "user", Content: userMsg},
+			}
+			resp, err := chatFn(cfg, microMessages)
+			if err != nil {
+				return "", false
+			}
+			m := microPassRe.FindStringSubmatch(strings.TrimSpace(resp))
+			if m == nil {
+				return "", false
+			}
+			var start, end int
+			fmt.Sscanf(m[1], "%d", &start)
+			fmt.Sscanf(m[2], "%d", &end)
+			if start < 1 {
+				start = 1
+			}
+			if end > totalLines {
+				end = totalLines
+			}
+			if start > end {
+				return "", false
+			}
+			extracted2 := strings.Join(lines[start-1:end], "\n")
+			tokCount := history.New(cfg.TokenThreshold, []history.Message{{Role: "user", Content: extracted2}}).TokenCount()
+			if tokCount > budget {
+				return "", false
+			}
+			return extracted2, true
+		}
+
+		// Build symbol map text from stored symbols (D-01, D-02).
 		var mapSB strings.Builder
-		for _, sym := range symbols {
+		for _, sym := range relevantSyms {
 			fmt.Fprintf(&mapSB, "%s: lines %d-%d\n", sym.Name, sym.Start, sym.End)
 		}
 
