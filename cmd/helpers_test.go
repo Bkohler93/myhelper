@@ -205,3 +205,32 @@ func TestMicroPassMigration(t *testing.T) {
 		t.Error("helpers.go must not contain microPassRe (CTX-04: deleted in Phase 12.03)")
 	}
 }
+
+// TestJoinContinuationLines verifies the pure helper that joins pre-accumulated
+// input lines with newlines. Each line in the slice has already had its trailing
+// backslash stripped by readMultiLine before being appended.
+func TestJoinContinuationLines(t *testing.T) {
+	t.Run("two-line continuation", func(t *testing.T) {
+		got := joinContinuationLines([]string{"first line", "second line"})
+		want := "first line\nsecond line"
+		if got != want {
+			t.Errorf("got %q, want %q", got, want)
+		}
+	})
+
+	t.Run("single line no continuation", func(t *testing.T) {
+		got := joinContinuationLines([]string{"simple"})
+		want := "simple"
+		if got != want {
+			t.Errorf("got %q, want %q", got, want)
+		}
+	})
+
+	t.Run("three-line continuation", func(t *testing.T) {
+		got := joinContinuationLines([]string{"a", "b", "c"})
+		want := "a\nb\nc"
+		if got != want {
+			t.Errorf("got %q, want %q", got, want)
+		}
+	})
+}
