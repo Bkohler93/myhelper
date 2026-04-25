@@ -104,7 +104,7 @@ Full archive: `.planning/milestones/v3.2-ROADMAP.md`
 
 ### v3.3 Rich Chat UX (Phases 24-25)
 
-- [ ] **Phase 24: Readline Input** - Integrate readline-style input with line editing, arrow key navigation, and multi-line support
+- [x] **Phase 24: Readline Input** - Integrate readline-style input with line editing, arrow key navigation, and multi-line support
 - [ ] **Phase 25: Markdown Rendering** - Render model responses as formatted markdown after stream completes
 
 ## Phase Details
@@ -122,7 +122,7 @@ Full archive: `.planning/milestones/v3.2-ROADMAP.md`
   5. User presses bare Enter to submit the complete input (including any embedded newlines) to the model
 
 Plans:
-- [ ] 24-01-PLAN.md — readline TTY gate, readMultiLine helper, continuation test
+- [x] 24-01-PLAN.md — readline TTY gate, readMultiLine helper, continuation test
 
 **UI hint**: yes
 
@@ -163,5 +163,5 @@ Plans:
 | 21. inspect Command | v3.2 | 2/2 | Complete | 2026-04-24 |
 | 22. Search Pipeline Spinners | v3.2 | 1/1 | Complete | 2026-04-24 |
 | 23. Cleanup & Correctness | v3.2 | 2/2 | Complete | 2026-04-24 |
-| 24. Readline Input | v3.3 | 0/1 | Not started | - |
+| 24. Readline Input | v3.3 | 1/1 | Complete | 2026-04-25 |
 | 25. Markdown Rendering | v3.3 | 0/? | Not started | - |
