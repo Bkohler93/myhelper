@@ -173,6 +173,46 @@
 
 ---
 
+## Milestone: v3.2 — Observability & Polish
+
+**Shipped:** 2026-04-24
+**Phases:** 3 (21-23) | **Plans:** 5 | **Sessions:** 1 (same day)
+
+### What Was Built
+- `myhelper inspect` dry-run command — per-stage gate/pre-filter/re-rank/metrics diagnostics with `--no-context` bypass and missing-artifacts detection
+- Goroutine-based terminal spinners at all 3 search pipeline waits (gate, fetch, re-rank) using stdlib only — zero new dependencies
+- SearXNG double-slash URL bug fixed; `llmReRank` error now named `reRankErr` with explicit `selected = candidates` fallback
+- Dead code eliminated: `countTokens` duplicate, `pkgs` param from `llmReRank`, `CallEdges`/`TypeRefs` documented as reserved-for-future
+- `microPassFile` refactored to use stored `Symbol.Start/End` — eliminates per-call AST re-parse; `ExtractSymbolMap` fallback for unindexed files
+
+### What Worked
+- Single-session, single-day execution — all 5 plans landed in ~2.5 hours
+- Stdlib-only spinner: no external dependency for a pure UX feature; goroutine + channel pattern is clean and portable
+- CTX-03 closed without a code change — investigation proved the dual injection path doesn't exist (`LoadContext` never called); correct outcome when a suspected bug turns out to be a ghost
+- Dedicated cleanup phase (23) made each fix trivially targeted — no risk of scope creep when the requirements are explicit bugs/dead code items
+- Post-plan correctness commit pattern (commit `1af3465`) — minor WR-style fixes after SUMMARY is written work cleanly as long as they're atomic and logged
+
+### What Was Inefficient
+- `myhelper inspect` adds observability for the `.myhelper/` retrieval pipeline specifically — but the project direction has shifted to chat+web-search as the primary use case; the pipeline is now secondary; mild mismatch worth acknowledging
+- Deferred live UAT (inspect + spinners) is now a repeat pattern across every milestone — should document the Ollama test setup needed at plan time, not just note it at close
+
+### Patterns Established
+- Spinner wrap: `sp := startSpinner("label..."); result = blockingCall(); sp.done()` — no defer, clears at call site
+- `microPassFile` stored-first pattern: filter stored symbols by FilePath → build line map; fall back to `ExtractSymbolMap` only when `len(relevantSyms) == 0`
+- Named error var for all internal LLM calls: `result, err := llmFn(...); if err != nil { result = fallback }` — explicit over silent discard
+
+### Key Lessons
+1. Before writing a fix for a suspected dual-injection bug, grep callers first — CTX-03 took zero code changes because the caller didn't exist
+2. A dedicated cleanup phase at the end of a milestone is a strong pattern — when requirements are explicit bugs/removals, execution is fast and risk is low
+3. Live UAT deferred at close is now the third straight milestone with this pattern — if the tool direction shifts to make the retrieval pipeline fully secondary, these tests may become permanently moot
+
+### Cost Observations
+- Model mix: sonnet throughout (single-model profile)
+- Sessions: 1 focused session
+- Notable: 19 files, +1,811 / -149 lines across 5 plans; 7,781 total Go LOC; fastest milestone execution yet
+
+---
+
 ## Cross-Milestone Trends
 
 ### Process Evolution
@@ -183,6 +223,8 @@
 | v1.1 | 2 | 3 | TDD throughout; worktree isolation per plan |
 | v1.2 | 1 | 4 | Two-pass retrieval; code review pipeline; 40 commits in one session |
 | v1.3 | 2 | 5 | Structured retrieval pipeline; artifact index; per-command strategies; 66 commits |
+| v3.1 | 1 | 3 | SearXNG client + search gate + re-rank; chat+web-search primary identity established |
+| v3.2 | 1 | 3 | inspect command + spinners + debt cleanup; fastest milestone yet (single day, 5 plans) |
 
 ### Cumulative Quality
 
@@ -192,6 +234,7 @@
 | v1.1 | 18 automated (Go test) | all packages | integration path (live Ollama) still requires manual verification |
 | v1.2 | 2,331 LOC tests | all packages | test LOC exceeds source LOC; integration (live Ollama) still manual |
 | v1.3 | ~2,900 LOC tests | all packages | 13 retrieval unit tests; Phase 11 VERIFICATION.md gap; integration still manual |
+| v3.2 | ~2,900 LOC tests (unchanged) | all packages | no new tests; debt cleanup + wiring; pre-existing planner fixture failure unrelated |
 
 ### Top Lessons (Verified Across Milestones)
 
@@ -201,3 +244,5 @@
 4. Stale ROADMAP.md checkboxes accumulate silently — verify at each phase boundary, not just milestone completion
 5. Run milestone audits after all phases complete — mid-milestone audits produce stale gap reports that mislead completion checks
 6. VERIFICATION.md files should be created immediately after each phase — deferred verification becomes invisible tech debt
+7. Before writing a fix for a suspected bug, grep callers first — sometimes the bug path doesn't exist (CTX-03: no code change needed)
+8. A dedicated cleanup phase at milestone end is a strong pattern — explicit bug/removal requirements execute fast with low risk

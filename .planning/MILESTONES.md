@@ -1,5 +1,23 @@
 # Milestones
 
+## v3.2 Observability & Polish (Shipped: 2026-04-24)
+
+**Phases completed:** 3 phases (21–23), 5 plans
+**Files changed:** 19 files, +1,811 / -149 lines
+**Timeline:** 2026-04-24 (single day)
+
+**Key accomplishments:**
+
+- `myhelper inspect` dry-run command wired to `BuildInspectContext` — per-stage gate/pre-filter/re-rank/metrics output; `--no-context` bypass; missing-artifacts detection (Phase 21)
+- Goroutine-based terminal spinners at all 3 search pipeline waits (gate, fetch, re-rank) using stdlib only — zero new dependencies (Phase 22)
+- SearXNG double-slash URL bug fixed; `llmReRank` error now named with explicit fallback to all candidates (Phase 23)
+- Dead code eliminated: `countTokens` duplicate, `pkgs` param from `llmReRank`, `CallEdges`/`TypeRefs` documented as reserved-for-future (Phase 23)
+- `microPassFile` uses stored `Symbol.Start/End` from artifacts — eliminates per-call AST re-parse for large files (Phase 23)
+
+Known deferred items at close: 2 (see STATE.md Deferred Items)
+
+---
+
 ## v3.1 Web Search (Shipped: 2026-04-11)
 
 **Phases completed:** 3 phases, 4 plans, 3 tasks

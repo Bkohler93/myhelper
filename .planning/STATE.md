@@ -1,17 +1,17 @@
 ---
 gsd_state_version: 1.0
-milestone: v3.2
-milestone_name: Observability & Polish
-status: in-progress
-stopped_at: Phase 23 Plan 02 complete — PERF-01, CTX-03 resolved; all v3.2 Phase 23 requirements done
-last_updated: "2026-04-24T20:52:21Z"
+milestone: v3.3
+milestone_name: Rich Chat UX
+status: in_progress
+stopped_at: milestone started — defining requirements
+last_updated: "2026-04-24T00:00:00Z"
 last_activity: 2026-04-24
 progress:
-  total_phases: 3
-  completed_phases: 3
-  total_plans: 4
-  completed_plans: 4
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -21,48 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-24)
 
 **Core value:** Fast, local chat with optional web search for current information — powered by a local Ollama model, no external API dependencies required.
-**Current focus:** v3.2 Observability & Polish — Phase 21 Plan 02 next
+**Current focus:** v3.3 Rich Chat UX — readline input + markdown rendering
 
 ## Current Position
 
-Phase: 23 (complete — 2/2 plans complete)
-Plan: 02 (complete)
-Status: Phase 23 complete; all v3.2 Phase 23 requirements satisfied; v3.2 Observability & Polish milestone ready for closure
-Last activity: 2026-04-24 — 23-02 complete (PERF-01 microPassFile stored symbols, CTX-03 documented as already resolved, PROJECT.md Core Value updated)
-
-```
-Progress: [██████████] 100% (4/4 plans complete across Phases 21-23)
-```
-
-## Performance Metrics
-
-**Velocity:**
-
-- Total plans completed: 41 (across v1.0, v1.1, v1.2, v1.3, v3.1)
-
-**By Phase:**
-
-| Phase | Plans | Status |
-|-------|-------|--------|
-| v1.0 Phase 1 | 4 | Complete |
-| v1.1 Phase 2 | 3 | Complete |
-| v1.1 Phase 3 | 2 | Complete |
-| v1.1 Phase 4 | 2 | Complete |
-| v1.2 Phase 5 | 6 | Complete |
-| v1.2 Phase 6 | 3 | Complete |
-| v1.2 Phase 7 | 2 | Complete |
-| v1.2 Phase 8 | 2 | Complete |
-| v1.3 Phase 9 | 2 | Complete |
-| v1.3 Phase 10 | 2 | Complete |
-| v1.3 Phase 11 | 1 | Complete |
-| v1.3 Phase 12 | 3 | Complete |
-| v1.3 Phase 13 | 3 | Complete |
-| v3.1 Phase 18 | 1 | Complete |
-| v3.1 Phase 19 | 2 | Complete |
-| v3.1 Phase 20 | 1 | Complete |
-| v3.2 Phase 21 | 2/2 | Complete |
-| v3.2 Phase 22 | 1/1 | Complete |
-| v3.2 Phase 23 | 2/2 | Complete |
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-04-24 — Milestone v3.3 started
 
 ## Accumulated Context
 
@@ -70,30 +36,30 @@ Progress: [██████████] 100% (4/4 plans complete across Phase
 
 Key decisions are logged in PROJECT.md Key Decisions table.
 
-### v3.2 Phase Structure
-
-| Phase | Name | Requirements |
-|-------|------|--------------|
-| 21 | inspect Command | INSP-01, INSP-02, INSP-03, INSP-04, INSP-05 |
-| 22 | Search Pipeline Spinners | UX-01, UX-02, UX-03 |
-| 23 | Cleanup & Correctness | BUG-01, BUG-02, CLN-01, CLN-02, CLN-03, CTX-03, PERF-01 |
-
 ### Key Implementation Notes (for planners)
 
-- `BuildInspectContext` already exists at `internal/retrieval/retrieval.go:776` — Phase 21 creates `cmd/inspect.go` and wires it
-- `InspectResult` needs `PreFilterCandidates []ScoredSymbol` (or equivalent) added to satisfy INSP-03
-- Bubble Tea spinner pattern: follow `RunWithSpinner` in `cmd/helpers.go` — do not introduce new Bubble Tea primitives
-- SearXNG spinner hooks belong in the search pipeline call sites in `cmd/search.go` or `internal/search/`
-- `microPassFile` lives in `internal/retrieval/retrieval.go`; `Symbol.Start`/`Symbol.End` are stored in `symbols.json` artifacts
-- `countTokens` duplicate: remove from `cmd/search.go`, redirect callers to `retrieval` package helper
-- CLN-03 is documentation only — do NOT remove `CallEdges`/`TypeRefs` fields from schema (avoids breaking existing `.myhelper/` dirs)
+- Current input loop uses raw `bufio.Scanner` on stdin — no line editing, no terminal control
+- `StreamChat` in `internal/ollama/client.go` already accumulates and returns the full response string
+- Conversation loop in `cmd/helpers.go:runConversationLoop` is the primary target for input improvements
+- Open to adding deps: readline library (e.g. chzyer/readline or charmbracelet/bubbles textarea) + markdown renderer (e.g. charmbracelet/glamour)
+- Enter = submit, Shift+Enter = newline (requires raw terminal or TUI framework capable of key distinction)
+- Streaming preserved: raw tokens stream first, then re-render as formatted markdown after stream completes
 
 ### Blockers/Concerns
 
 None.
 
+## Deferred Items
+
+Items deferred from v3.2:
+
+| Category | Item | Status |
+|----------|------|--------|
+| verification | Phase 21: 21-VERIFICATION.md [human_needed] — live `myhelper inspect` smoke test against real .myhelper/ artifacts + Ollama | deferred |
+| verification | Phase 22: 22-VERIFICATION.md [human_needed] — live spinner clear test on real TTY with Ollama+SearXNG | deferred |
+
 ## Session Continuity
 
 Last session: 2026-04-24
-Stopped at: Phase 23 Plan 02 complete — all 7 requirements satisfied (BUG-01, BUG-02, CLN-01, CLN-02, CLN-03, PERF-01, CTX-03)
-Resume: v3.2 milestone complete; run `/gsd-complete-milestone` to close out
+Stopped at: v3.3 milestone started — requirements being defined
+Resume: continue requirements gathering, then run `/gsd-plan-phase [N]`

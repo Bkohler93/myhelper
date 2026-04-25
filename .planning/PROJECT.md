@@ -8,17 +8,13 @@ A Go CLI that provides fast, local-model-powered chat (`myhelper chat`) with opt
 
 Fast, local chat with optional web search for current information — powered by a local Ollama model, no external API dependencies required.
 
-## Current Milestone: v3.2 Observability & Polish
+## Current Milestone: v3.3 Rich Chat UX
 
-**Goal:** Wire the inspect command, add Bubble Tea spinners for async waits, and eliminate all known tech debt.
+**Goal:** Replace the raw stdin loop with a proper editing experience and render model responses as formatted markdown.
 
 **Target features:**
-- `inspect` command — wire `cmd/inspect.go` to `BuildInspectContext`; per-stage formatted output with `--no-context` support
-- Loading spinners (Bubble Tea) — SearXNG fetch, LLM gate call, LLM re-rank call
-- Bug fixes — double-slash SearXNG URL, silent `llmReRank` error discard
-- Dead code removal — unused `CallEdges`/`TypeRefs`, `PackageEntry.Responsibility`, `countTokens` duplicate
-- Dual context injection fix — eliminate redundancy between `context.md` and `proj.Summary`
-- Runtime perf — `microPassFile` uses stored `Symbol.Start/End` instead of re-parsing AST
+- Readline-style input — arrow keys, backspace, history navigation; Enter submits, Shift+Enter inserts a newline
+- Markdown rendering — responses stream as raw tokens, then re-render as formatted markdown after stream completes
 
 ## Requirements
 
@@ -60,15 +56,17 @@ Fast, local chat with optional web search for current information — powered by
 - ✓ Result injection — `[WEB RESULTS]` block prepended to query; token-budget-aware truncation — v3.1
 - ✓ `--search` / `--no-search` flags — force or suppress search regardless of gate decision — v3.1
 
+- ✓ `inspect` dry-run command — per-stage gate/pre-filter/re-rank/metrics diagnostics; `--no-context` bypass — v3.2
+- ✓ Goroutine-based spinners at all 3 search pipeline waits (gate, fetch, re-rank); stdlib only — v3.2
+- ✓ SearXNG trailing-slash URL bug fixed; `llmReRank` error surfaced with named variable — v3.2
+- ✓ `countTokens` duplicate removed; `pkgs` param removed from `llmReRank`; `CallEdges`/`TypeRefs` reserved — v3.2
+- ✓ `microPassFile` uses stored `Symbol.Start/End` — eliminates per-call AST re-parse — v3.2
+
 ### Active
 
-- [ ] `inspect` command — wire `cmd/inspect.go` to `BuildInspectContext`; per-stage output with `--no-context` support
-- [ ] Loading spinners (Bubble Tea) — SearXNG fetch, LLM gate call, LLM re-rank call
-- [ ] Double-slash SearXNG URL bug fix
-- [ ] Silent `llmReRank` error discard fix
-- [ ] Dead code removal — unused `CallEdges`/`TypeRefs`, `PackageEntry.Responsibility`, `countTokens` duplicate
-- [ ] Dual context injection fix — eliminate `context.md` + `proj.Summary` redundancy
-- [ ] `microPassFile` perf — use stored `Symbol.Start/End` instead of re-parsing AST
+- Readline-style input with line editing (arrow keys, backspace, history) — v3.3
+- Multi-line input: Enter = submit, Shift+Enter = newline — v3.3
+- Markdown rendering of model responses after stream completes — v3.3
 
 ### Out of Scope
 
@@ -88,11 +86,12 @@ Fast, local chat with optional web search for current information — powered by
 - **Retrieval constraint**: context must fit within ~80% of token threshold after system + history
 - **User workflow**: Developer runs tool inside a Go project; `init` builds structured index; query commands retrieve minimal context and expand as needed
 - **Primary use case**: Solo developer productivity tool; local-only execution
-- **Codebase state (v3.1)**: ~7,500 LOC Go total (source + tests); includes `internal/search/`, `cmd/search.go` web search pipeline
+- **Codebase state (v3.2)**: ~7,781 LOC Go total (source + tests); includes `internal/search/`, `cmd/search.go` web search pipeline, `cmd/inspect.go` dry-run diagnostics
 - **Tech stack**: Go, cobra, bufio scanner (NDJSON streaming), go-tiktoken, go/ast, JSON-based index, `internal/retrieval` pipeline, SearXNG JSON API
-- **Known tech debt (v3.1)**:
-  - All v3.1 tech debt resolved in Phase 23 (Cleanup & Correctness)
+- **Known tech debt (v3.2)**:
   - `Symbol.CallEdges`/`TypeRefs` stored but not consumed — documented as reserved for future ranking
+  - `llmReRank` always returns nil error by design — named `reRankErr` branches are technically dead code
+  - `ExtractSymbolsFull` doc comment says "populated by walking function bodies" — contradicts CLN-03 reserved-for-future struct comments (doc only)
 
 ## Constraints
 
@@ -123,6 +122,11 @@ Fast, local chat with optional web search for current information — powered by
 | LLM re-rank before injection | Reduces irrelevant noise in context window | ✓ v3.1 — RANK-01/02/03 |
 | 25% token budget for web context | Leaves 75% for codebase context and history | ✓ v3.1 — INJ-02 |
 | num_results=10 hardcoded | CLI surface stays small; default sufficient per REQUIREMENTS.md | ✓ v3.1 — SRCH-04 |
+| Inline gate logic in BuildInspectContext | Captures raw LLM answer without changing stable needsContext used by BuildContext | ✓ v3.2 — INSP-02 |
+| Spinner in cmd/search.go (not a new file) | Search-layer helpers co-located; stdlib goroutine, no Bubble Tea, done() at call site | ✓ v3.2 — UX-01/02/03 |
+| pkgs param removed from llmReRank (not wired in) | No consumer existed; removal is cleaner than adding unused wiring | ✓ v3.2 — CLN-02 |
+| CTX-03 closed without code change | LoadContext defined but never called — no dual injection path exists | ✓ v3.2 — CTX-03 |
+| microPassFile falls back to ExtractSymbolMap when relevantSyms empty | Preserves correctness for unindexed files while eliminating AST re-parse for indexed ones | ✓ v3.2 — PERF-01 |
 
 ## Evolution
 
@@ -135,4 +139,4 @@ This document evolves at milestone boundaries.
 4. Context + architecture update
 
 ---
-*Last updated: 2026-04-24 — v3.2 Phase 23 complete; all tech debt resolved*
+*Last updated: 2026-04-24 — v3.3 milestone started; Rich Chat UX (readline input + markdown rendering)*

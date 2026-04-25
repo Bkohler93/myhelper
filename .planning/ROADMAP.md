@@ -10,6 +10,7 @@
 - ✅ **v3.0 Simple Chat Wrapper** — Phases 16-17 (shipped 2026-04-11)
 - ✅ **v3.1 Web Search** — Phases 18-20 (shipped 2026-04-11)
 - ✅ **v3.2 Observability & Polish** — Phases 21-23 (shipped 2026-04-24)
+- 🔄 **v3.3 Rich Chat UX** — Phases 24-25 (in progress)
 
 ## Phases
 
@@ -90,57 +91,50 @@ Full archive: `.planning/milestones/v3.1-ROADMAP.md`
 
 </details>
 
-### v3.2 Observability & Polish
+<details>
+<summary>✅ v3.2 Observability & Polish (Phases 21-23) — SHIPPED 2026-04-24</summary>
 
-- [x] **Phase 21: inspect Command** — Wire cmd/inspect.go to BuildInspectContext with per-stage formatted output
-- [x] **Phase 22: Search Pipeline Spinners** — Add goroutine-based spinners for SearXNG fetch, LLM gate, and LLM re-rank (no new dependencies)
-- [x] **Phase 23: Cleanup & Correctness** — Fix bugs, eliminate dead code, and close dual context injection and microPassFile debt
+- [x] Phase 21: inspect Command (2/2 plans) — completed 2026-04-24
+- [x] Phase 22: Search Pipeline Spinners (1/1 plan) — completed 2026-04-24
+- [x] Phase 23: Cleanup & Correctness (2/2 plans) — completed 2026-04-24
+
+Full archive: `.planning/milestones/v3.2-ROADMAP.md`
+
+</details>
+
+### v3.3 Rich Chat UX (Phases 24-25)
+
+- [ ] **Phase 24: Readline Input** - Integrate readline-style input with line editing, arrow key navigation, and multi-line support
+- [ ] **Phase 25: Markdown Rendering** - Render model responses as formatted markdown after stream completes
 
 ## Phase Details
 
-### Phase 21: inspect Command
-**Goal**: Users can run `myhelper inspect <query>` to see exactly which symbols and files the retrieval pipeline would select, and why, without triggering a model response
-**Depends on**: Phase 20 (v3.1 complete)
-**Requirements**: INSP-01, INSP-02, INSP-03, INSP-04, INSP-05
-**Success Criteria** (what must be TRUE):
-  1. `myhelper inspect "some query"` executes without error and prints per-stage diagnostics to stdout
-  2. Output shows the relevance gate decision (pass/fail) and the raw LLM answer that produced it
-  3. Output lists pre-filter candidates with their keyword scores (INSP-03 requires PreFilterCandidates added to InspectResult)
-  4. Output distinguishes symbols that survived LLM re-ranking from those that were dropped
-  5. `myhelper inspect --no-context "some query"` exits with a message indicating context was bypassed and skips all retrieval stages
-**Plans**: 2 plans
-Plans:
-- [x] 21-01-PLAN.md — Extend InspectResult + restore cmd helpers (retrieval.go, cmd/root.go, cmd/helpers.go)
-- [x] 21-02-PLAN.md — Create cmd/inspect.go cobra subcommand with formatted diagnostics output
-
-### Phase 22: Search Pipeline Spinners
-**Goal**: Users see a loading spinner during each async wait in the search pipeline so the tool feels responsive instead of silently blocking
-**Depends on**: Phase 21
-**Requirements**: UX-01, UX-02, UX-03
-**Success Criteria** (what must be TRUE):
-  1. A spinner appears in the terminal while SearXNG is fetching results and clears when the fetch completes
-  2. A spinner appears while the LLM gate call is running and clears when the yes/no decision is returned
-  3. A spinner appears while the LLM re-rank call is running and clears when re-ranking completes
-  4. Spinner is goroutine-based using only stdlib (os, time, fmt, strings) — go.mod is unchanged
+### Phase 24: Readline Input
+**Goal**: Users interact with the chat loop through a proper line-editing experience with history and multi-line input
+**Depends on**: Nothing (continuing from v3.2 completed state)
+**Requirements**: INPUT-01, INPUT-02, INPUT-03, INPUT-04
 **Plans**: 1 plan
-Plans:
-- [x] 22-01-PLAN.md — Add spinner type + wire 3 call sites in cmd/search.go (buildUserMessage)
-
-### Phase 23: Cleanup & Correctness
-**Goal**: All known v3.1 tech debt is eliminated — bugs fixed, duplicate code removed, and dormant fields either wired or documented — so the codebase is clean entering the next milestone
-**Depends on**: Phase 22
-**Requirements**: BUG-01, BUG-02, CLN-01, CLN-02, CLN-03, CTX-03, PERF-01
 **Success Criteria** (what must be TRUE):
-  1. A SearXNG endpoint configured with a trailing slash (e.g. `http://host/`) produces a valid URL with no double-slash in the path
-  2. When `llmReRank` returns an error, `BuildContext` and `BuildInspectContext` surface it to the caller rather than silently discarding it
-  3. `cmd/search.go` contains no `countTokens` function; all token-counting in the search path goes through the shared retrieval package helper
-  4. `PackageEntry.Responsibility` is either passed into the `llmReRank` prompt or explicitly removed from the re-rank call; no field is silently populated and never read
-  5. `microPassFile` reads `Symbol.Start`/`Symbol.End` from the stored artifact instead of calling `ExtractSymbolMap`; running `inspect` on a large file produces the same line range selection without re-parsing AST
-  6. Queries no longer inject both `context.md` content and `proj.Summary` when they carry the same information; token usage for context-heavy queries measurably decreases
-**Plans**: 2 plans
+  1. User can press left/right arrow keys to move the cursor within the current input and backspace to delete a character
+  2. User can press Home/End to jump to the start or end of the current input line
+  3. User can press up/down arrow keys to cycle through previously submitted messages in the current session
+  4. User can type a line ending in \ to continue input on the next line; bare Enter submits
+  5. User presses bare Enter to submit the complete input (including any embedded newlines) to the model
+
 Plans:
-- [x] 23-01-PLAN.md — Bug fixes + dead code removal (BUG-01, BUG-02, CLN-01, CLN-02, CLN-03)
-- [x] 23-02-PLAN.md — microPassFile refactor + PROJECT.md Core Value update (PERF-01, CTX-03)
+- [ ] 24-01-PLAN.md — readline TTY gate, readMultiLine helper, continuation test
+
+**UI hint**: yes
+
+### Phase 25: Markdown Rendering
+**Goal**: Users read model responses rendered as formatted markdown rather than raw token output
+**Depends on**: Phase 24
+**Requirements**: RNDR-01, RNDR-02
+**Plans**: TBD
+**Success Criteria** (what must be TRUE):
+  1. After a model response finishes streaming, the raw output is replaced by a formatted markdown rendering of the complete response
+  2. Code blocks in the rendered response are visually distinct from prose text, with visible fence formatting
+**UI hint**: yes
 
 ## Progress
 
@@ -169,3 +163,5 @@ Plans:
 | 21. inspect Command | v3.2 | 2/2 | Complete | 2026-04-24 |
 | 22. Search Pipeline Spinners | v3.2 | 1/1 | Complete | 2026-04-24 |
 | 23. Cleanup & Correctness | v3.2 | 2/2 | Complete | 2026-04-24 |
+| 24. Readline Input | v3.3 | 0/1 | Not started | - |
+| 25. Markdown Rendering | v3.3 | 0/? | Not started | - |

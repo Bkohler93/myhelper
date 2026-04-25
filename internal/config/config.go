@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	DefaultEndpoint       = "192.168.0.9:11434"
+	DefaultEndpoint       = "192.168.1.146:11434"
 	DefaultModel          = "qwen2.5-coder:7b"
 	DefaultTokenThreshold = 4100
 )
