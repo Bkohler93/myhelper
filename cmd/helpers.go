@@ -14,6 +14,7 @@ import (
 	"github.com/bkohler93/myhelper/internal/config"
 	"github.com/bkohler93/myhelper/internal/history"
 	"github.com/bkohler93/myhelper/internal/ollama"
+	"github.com/chzyer/readline"
 )
 
 // stdinReader is the source of input for the conversation loop.
@@ -42,6 +43,38 @@ func initiateConversation(cfg config.Config, hist *history.History, streamFn fun
 	return nil
 }
 
+// joinContinuationLines joins a pre-accumulated slice of input lines with newlines.
+// Each line in the slice has already had its trailing backslash stripped by the caller.
+// This function is package-level so it can be unit-tested directly without a TTY.
+func joinContinuationLines(lines []string) string {
+	return strings.Join(lines, "\n")
+}
+
+// readMultiLine reads one logical input from rl, supporting \ continuation.
+// A line ending in \ is appended (without the backslash) and the prompt
+// switches to "... " until a bare-Enter line terminates the input.
+// The joined string is returned; callers should TrimSpace before use.
+// Errors (io.EOF, readline.ErrInterrupt) are returned immediately.
+func readMultiLine(rl *readline.Instance) (string, error) {
+	var lines []string
+	rl.SetPrompt("> ")
+	for {
+		line, err := rl.Readline()
+		if err != nil {
+			return "", err
+		}
+		if strings.HasSuffix(line, `\`) {
+			lines = append(lines, strings.TrimSuffix(line, `\`))
+			rl.SetPrompt("... ")
+			continue
+		}
+		lines = append(lines, line)
+		rl.SetPrompt("> ")
+		break
+	}
+	return joinContinuationLines(lines), nil
+}
+
 // runConversationLoop drives the multi-turn conversation after the first
 // model response. It reads follow-up input from stdin, calls streamFn for
 // each non-empty non-quit turn, and appends messages to hist.
@@ -51,9 +84,14 @@ func initiateConversation(cfg config.Config, hist *history.History, streamFn fun
 //   - EOF on stdin
 //   - SIGINT received
 //
-// Per D-01: prompt is "> " written to os.Stderr.
+// On a real TTY, readline handles arrow-key cursor movement, Home/End, and
+// in-session history navigation (up/down arrow). Non-TTY callers (pipes,
+// go test) fall through to the unchanged bufio path.
+//
+// Per D-01: prompt is "> " (readline owns it on TTY; no prompt on bufio path).
 // Per D-02: empty input reprints "> " and waits; no model call.
-// Per D-03: SIGINT installs os/signal handler; exits cleanly.
+// Per D-03: SIGINT installs os/signal handler for bufio path; readline path
+// handles Ctrl+C via readline.ErrInterrupt.
 // Per D-04: "quit" detected before model call; exits cleanly.
 // Per D-05: loop lives here; all 4 commands call this.
 // Per D-07: ExceedsLimit() checked at top of loop; summarize() called when true.
@@ -64,13 +102,75 @@ func runConversationLoop(
 	streamFn func(config.Config, []history.Message) (string, error),
 	summarizePrompt string,
 	recondensePrompt string,
-	preprocessor func(string) string, // NEW: nil = identity (no-op)
+	preprocessor func(string) string, // nil = identity (no-op)
 ) error {
-	// Install SIGINT handler (per D-03).
+	// Install SIGINT handler (kept for bufio path; readline path handles Ctrl+C
+	// via readline.ErrInterrupt at the raw-mode level).
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, syscall.SIGINT)
 	defer signal.Stop(sigCh)
 
+	// --- READLINE PATH (TTY only) ---
+	// Use os.Stdin.Fd() directly — NOT stdinReader — so that the TTY check
+	// reflects the real stdin fd and the test seam (stdinReader) is unaffected.
+	if readline.IsTerminal(int(os.Stdin.Fd())) {
+		rl, err := readline.NewEx(&readline.Config{
+			Prompt:                 "> ",
+			HistoryLimit:           100,
+			DisableAutoSaveHistory: true, // we call SaveHistory manually after joining
+			InterruptPrompt:        "^C",
+			EOFPrompt:              "exit",
+		})
+		if err != nil {
+			return fmt.Errorf("readline init: %w", err)
+		}
+		defer rl.Close()
+
+		for {
+			// Summarize history if token threshold exceeded (per D-07, D-08).
+			if hist.ExceedsLimit() && len(hist.Messages()) >= 4 {
+				fmt.Fprint(os.Stderr, "[Condensing history...]\n")
+				if err := summarize(cfg, hist, summarizePrompt, recondensePrompt); err != nil {
+					return err
+				}
+			}
+
+			joined, err := readMultiLine(rl)
+			if err == io.EOF || err == readline.ErrInterrupt {
+				return nil
+			}
+			if err != nil {
+				return err
+			}
+
+			input := strings.TrimSpace(joined)
+			if input == "" {
+				continue
+			}
+			if input == "quit" {
+				return nil
+			}
+
+			// Store the raw joined string as a single history entry so that
+			// up-arrow recalls the complete multi-line input (not intermediate lines).
+			if saveErr := rl.SaveHistory(input); saveErr != nil {
+				_ = saveErr // non-fatal: history failure does not break conversation
+			}
+
+			msg := input
+			if preprocessor != nil {
+				msg = preprocessor(input)
+			}
+			hist.Add("user", msg)
+			response, err := streamFn(cfg, hist.Messages())
+			if err != nil {
+				return err
+			}
+			hist.Add("assistant", response)
+		}
+	}
+
+	// --- BUFIO PATH (non-TTY: pipes, go test, CI) ---
 	// Launch a single scanner goroutine outside the loop to avoid per-iteration
 	// goroutine allocation (WR-03). The goroutine feeds all lines into resultCh
 	// and sends a final zero-value entry on EOF/error.
@@ -110,7 +210,7 @@ func runConversationLoop(
 			}
 		}
 
-		fmt.Fprint(os.Stderr, "> ") // per D-01
+		// No prompt printed here — bufio path is non-interactive (pipes, CI).
 
 		var result scanResult
 		select {
