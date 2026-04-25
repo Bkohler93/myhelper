@@ -104,7 +104,7 @@ Full archive: `.planning/milestones/v3.2-ROADMAP.md`
 
 ### v3.3 Rich Chat UX (Phases 24-25)
 
-- [x] **Phase 24: Readline Input** - Integrate readline-style input with line editing, arrow key navigation, and multi-line support
+- [x] **Phase 24: Readline Input** - Integrate readline-style input with line editing, arrow key navigation, and multi-line support — completed 2026-04-25
 - [ ] **Phase 25: Markdown Rendering** - Render model responses as formatted markdown after stream completes
 
 ## Phase Details
@@ -130,10 +130,14 @@ Plans:
 **Goal**: Users read model responses rendered as formatted markdown rather than raw token output
 **Depends on**: Phase 24
 **Requirements**: RNDR-01, RNDR-02
-**Plans**: TBD
+**Plans**: 1 plan
 **Success Criteria** (what must be TRUE):
   1. After a model response finishes streaming, the raw output is replaced by a formatted markdown rendering of the complete response
   2. Code blocks in the rendered response are visually distinct from prose text, with visible fence formatting
+
+Plans:
+- [ ] 25-01-PLAN.md — renderMarkdown helper, startRenderSpinner, StreamChat TTY gate + branch
+
 **UI hint**: yes
 
 ## Progress
@@ -164,4 +168,4 @@ Plans:
 | 22. Search Pipeline Spinners | v3.2 | 1/1 | Complete | 2026-04-24 |
 | 23. Cleanup & Correctness | v3.2 | 2/2 | Complete | 2026-04-24 |
 | 24. Readline Input | v3.3 | 1/1 | Complete | 2026-04-25 |
-| 25. Markdown Rendering | v3.3 | 0/? | Not started | - |
+| 25. Markdown Rendering | v3.3 | 0/1 | Not started | - |
