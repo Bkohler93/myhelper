@@ -9,10 +9,54 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"time"
+
+	"github.com/charmbracelet/glamour"
+	"github.com/chzyer/readline"
 
 	"github.com/bkohler93/myhelper/internal/config"
 	"github.com/bkohler93/myhelper/internal/history"
 )
+
+// renderMarkdown renders a markdown string using glamour with auto style detection.
+// Returns the raw string unchanged on any error or if the input is blank.
+func renderMarkdown(s string) string {
+	if strings.TrimSpace(s) == "" {
+		return s
+	}
+	r, err := glamour.NewTermRenderer(glamour.WithAutoStyle())
+	if err != nil {
+		return s
+	}
+	out, err := r.Render(s)
+	if err != nil {
+		return s
+	}
+	return out
+}
+
+// startRenderSpinner starts an animated spinner on stderr with the label "Rendering..."
+// Returns a done func that stops the spinner and clears the line.
+func startRenderSpinner() func() {
+	stop := make(chan struct{})
+	go func() {
+		frames := []rune{'|', '/', '-', '\\'}
+		i := 0
+		t := time.NewTicker(100 * time.Millisecond)
+		defer t.Stop()
+		for {
+			fmt.Fprintf(os.Stderr, "\r%c Rendering...", frames[i])
+			i = (i + 1) % len(frames)
+			select {
+			case <-stop:
+				fmt.Fprintf(os.Stderr, "\r%s\r", strings.Repeat(" ", len("Rendering...")+3))
+				return
+			case <-t.C:
+			}
+		}
+	}()
+	return func() { close(stop) }
+}
 
 type chatRequest struct {
 	Model    string            `json:"model"`
@@ -60,6 +104,8 @@ func StreamChat(cfg config.Config, messages []history.Message) (string, error) {
 		return "", fmt.Errorf("ollama returned %d: %s", resp.StatusCode, strings.TrimSpace(string(body)))
 	}
 
+	isTTY := readline.IsTerminal(int(os.Stdout.Fd()))
+
 	var sb strings.Builder
 	scanner := bufio.NewScanner(resp.Body)
 	for scanner.Scan() {
@@ -71,13 +117,22 @@ func StreamChat(cfg config.Config, messages []history.Message) (string, error) {
 		if err := json.Unmarshal(line, &chunk); err != nil {
 			return "", fmt.Errorf("unmarshal chunk: %w", err)
 		}
-		fmt.Fprint(os.Stdout, chunk.Message.Content)
+		if !isTTY {
+			fmt.Fprint(os.Stdout, chunk.Message.Content)
+		}
 		sb.WriteString(chunk.Message.Content)
 		if chunk.Done {
 			break
 		}
 	}
-	fmt.Fprintln(os.Stdout) // trailing newline after stream completes
+	if isTTY {
+		done := startRenderSpinner()
+		rendered := renderMarkdown(sb.String())
+		done()
+		fmt.Fprint(os.Stdout, rendered) // glamour output already ends with \n
+	} else {
+		fmt.Fprintln(os.Stdout) // non-TTY raw trailing newline — unchanged
+	}
 
 	if err := scanner.Err(); err != nil {
 		return "", fmt.Errorf("reading stream: %w", err)
