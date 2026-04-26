@@ -153,13 +153,16 @@ Plans:
 **Goal**: The codebase contains only live, used packages — dead retrieval infrastructure is gone and the build is clean
 **Depends on**: Phase 25
 **Requirements**: PURGE-01, PURGE-02, PURGE-03, PURGE-04, PURGE-05, PURGE-06
-**Plans**: TBD
+**Plans**: 1 plan
 **Success Criteria** (what must be TRUE):
   1. `internal/context`, `internal/planner`, `internal/retrieval`, and `internal/scanner` directories no longer exist in the repository
   2. `cmd/root.go` contains no `--no-context` flag declaration or `noContextFlag` variable
   3. `go build ./...` completes with no errors and no warnings after all deletions
   4. `go test ./...` passes with no failures (tests referencing deleted packages are also removed)
   5. `go mod tidy` produces no changes to go.mod or go.sum
+
+Plans:
+- [ ] 26-01-PLAN.md — stub inspect, remove noContextFlag, delete dead packages, verify build
 
 ### Phase 27: Inspect Rewrite
 **Goal**: `myhelper inspect <query>` is a useful web search diagnostic that shows exactly what the search pipeline would do for a given query
@@ -204,5 +207,5 @@ Plans:
 | 23. Cleanup & Correctness | v3.2 | 2/2 | Complete | 2026-04-24 |
 | 24. Readline Input | v3.3 | 1/1 | Complete | 2026-04-25 |
 | 25. Markdown Rendering | v3.3 | 1/1 | Complete | 2026-04-25 |
-| 26. Dead Code Purge | v4.0 | 0/TBD | Not started | - |
+| 26. Dead Code Purge | v4.0 | 0/1 | Not started | - |
 | 27. Inspect Rewrite | v4.0 | 0/TBD | Not started | - |
