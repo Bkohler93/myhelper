@@ -72,25 +72,25 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| PURGE-01 | TBD | Pending |
-| PURGE-02 | TBD | Pending |
-| PURGE-03 | TBD | Pending |
-| PURGE-04 | TBD | Pending |
-| PURGE-05 | TBD | Pending |
-| PURGE-06 | TBD | Pending |
-| INSP-01 | TBD | Pending |
-| INSP-02 | TBD | Pending |
-| INSP-03 | TBD | Pending |
-| INSP-04 | TBD | Pending |
-| INSP-05 | TBD | Pending |
-| INSP-06 | TBD | Pending |
-| INSP-07 | TBD | Pending |
+| PURGE-01 | Phase 26 | Pending |
+| PURGE-02 | Phase 26 | Pending |
+| PURGE-03 | Phase 26 | Pending |
+| PURGE-04 | Phase 26 | Pending |
+| PURGE-05 | Phase 26 | Pending |
+| PURGE-06 | Phase 26 | Pending |
+| INSP-01 | Phase 27 | Pending |
+| INSP-02 | Phase 27 | Pending |
+| INSP-03 | Phase 27 | Pending |
+| INSP-04 | Phase 27 | Pending |
+| INSP-05 | Phase 27 | Pending |
+| INSP-06 | Phase 27 | Pending |
+| INSP-07 | Phase 27 | Pending |
 
 **Coverage:**
 - v4.0 requirements: 13 total
-- Mapped to phases: TBD (roadmapper)
-- Unmapped: 13
+- Mapped to phases: 13
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-04-24*
-*Last updated: 2026-04-25 — v4.0 requirements added; v3.3 requirements marked shipped*
+*Last updated: 2026-04-25 — v4.0 requirements mapped to phases 26-27*
