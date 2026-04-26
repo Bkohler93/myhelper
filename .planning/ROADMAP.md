@@ -10,7 +10,7 @@
 - ✅ **v3.0 Simple Chat Wrapper** — Phases 16-17 (shipped 2026-04-11)
 - ✅ **v3.1 Web Search** — Phases 18-20 (shipped 2026-04-11)
 - ✅ **v3.2 Observability & Polish** — Phases 21-23 (shipped 2026-04-24)
-- 🔄 **v3.3 Rich Chat UX** — Phases 24-25 (in progress)
+- ✅ **v3.3 Rich Chat UX** — Phases 24-25 (shipped 2026-04-25)
 
 ## Phases
 
@@ -105,7 +105,7 @@ Full archive: `.planning/milestones/v3.2-ROADMAP.md`
 ### v3.3 Rich Chat UX (Phases 24-25)
 
 - [x] **Phase 24: Readline Input** - Integrate readline-style input with line editing, arrow key navigation, and multi-line support — completed 2026-04-25
-- [ ] **Phase 25: Markdown Rendering** - Render model responses as formatted markdown after stream completes
+- [x] **Phase 25: Markdown Rendering** - Render model responses as formatted markdown after stream completes — completed 2026-04-25
 
 ## Phase Details
 
@@ -136,7 +136,7 @@ Plans:
   2. Code blocks in the rendered response are visually distinct from prose text, with visible fence formatting
 
 Plans:
-- [~] 25-01-PLAN.md — renderMarkdown helper, startRenderSpinner, StreamChat TTY gate + branch (Tasks 1-2 complete; awaiting checkpoint:human-verify)
+- [x] 25-01-PLAN.md — renderMarkdown helper, startSpinner, StreamChat TTY gate + erase-and-replace (all tasks complete)
 
 **UI hint**: yes
 
@@ -168,4 +168,4 @@ Plans:
 | 22. Search Pipeline Spinners | v3.2 | 1/1 | Complete | 2026-04-24 |
 | 23. Cleanup & Correctness | v3.2 | 2/2 | Complete | 2026-04-24 |
 | 24. Readline Input | v3.3 | 1/1 | Complete | 2026-04-25 |
-| 25. Markdown Rendering | v3.3 | 0/1 | In progress (checkpoint) | - |
+| 25. Markdown Rendering | v3.3 | 1/1 | Complete | 2026-04-25 |

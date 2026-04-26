@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v3.3
 milestone_name: Rich Chat UX
-status: in_progress
-stopped_at: "Phase 25 Plan 01 — checkpoint:human-verify (Task 3) — install binary and smoke-test rendering"
-last_updated: "2026-04-25T16:54:10Z"
+status: complete
+stopped_at: ""
+last_updated: "2026-04-25T00:00:00Z"
 last_activity: 2026-04-25
 progress:
   total_phases: 2
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 2
-  completed_plans: 1
-  percent: 75
+  completed_plans: 2
+  percent: 100
 ---
 
 # Project State
@@ -21,17 +21,17 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-24)
 
 **Core value:** Fast, local chat with optional web search for current information — powered by a local Ollama model, no external API dependencies required.
-**Current focus:** v3.3 Rich Chat UX — readline input (Phase 24) + markdown rendering (Phase 25)
+**Current focus:** v3.3 Rich Chat UX — COMPLETE (Phases 24-25 shipped 2026-04-25)
 
 ## Current Position
 
 Phase: 25 — Markdown Rendering
 Plan: 01
-Status: In progress — awaiting checkpoint:human-verify (Task 3)
-Last activity: 2026-04-25 — Phase 25 Plan 01 Tasks 1+2 complete; checkpoint awaiting human approval
+Status: Complete
+Last activity: 2026-04-25 — All phases complete; milestone v3.3 ready for lifecycle
 
 ```
-Progress: [===============   ] 75% (1/2 phases, 1/2 plans)
+Progress: [==================] 100% (2/2 phases, 2/2 plans)
 ```
 
 ## Accumulated Context
@@ -46,6 +46,8 @@ Progress: [===============   ] 75% (1/2 phases, 1/2 plans)
 - Phase 25: done() called before fmt.Fprint(os.Stdout, rendered) — prevents spinner/glamour output interleave on stderr+stdout
 - Phase 25: render_test.go uses package ollama (internal) to test unexported renderMarkdown — not package ollama_test
 - Phase 25: TestRenderMarkdown non-empty subtest checks text presence not ** removal — glamour ASCII style in non-TTY test env preserves markers
+- Phase 25: \033[s/\033[u\033[J erase-and-replace — tokens stream visibly then are replaced by glamour-rendered output
+- Phase 25: startSpinner(label) generic helper with blocking done func — prevents stderr/stdout interleave for both Generating... and Rendering... spinners
 - `joinContinuationLines` extracted as package-level pure helper — enables unit testing without a TTY
 - `fmt.Fprint(os.Stderr, "> ")` removed from bufio path — non-interactive path needs no prompt
 
@@ -56,6 +58,8 @@ Progress: [===============   ] 75% (1/2 phases, 1/2 plans)
 - `stdinReader` test seam is untouched — tests continue to exercise the bufio path automatically
 - `joinContinuationLines` and `readMultiLine` are package-level helpers in cmd/helpers.go
 - Arrow keys, Home/End, and in-session history navigation are native to readline (no application code needed)
+- StreamChat TTY path: Generating... spinner → tokens stream → \033[u\033[J erase → Rendering... spinner → glamour output
+- StreamChat non-TTY path: tokens stream → Fprintln (unchanged from pre-v3.3)
 
 ### Blockers/Concerns
 
@@ -72,6 +76,5 @@ Items deferred from v3.2:
 
 ## Session Continuity
 
-Last session: 2026-04-25T16:54:10Z
-Stopped at: Phase 25, Plan 01 — checkpoint:human-verify (Task 3) — install binary and smoke-test rendering
-Resume: Run `go install .` then `myhelper chat "explain recursion with a code example"` to verify RNDR-01/RNDR-02, then type "approved"
+Last session: 2026-04-25
+Stopped at: v3.3 complete — all phases done, entering lifecycle (audit → complete → cleanup)

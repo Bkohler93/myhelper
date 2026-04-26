@@ -154,11 +154,16 @@ func buildUserMessage(query string, cfg config.Config, searchCfg search.Config, 
 		return query // network/empty: degrade gracefully
 	}
 
-	sp3 := startSpinner("Filtering results...")
-	ranked, _ := reRankResults(query, results, cfg)
-	sp3.done()
-	if ranked == nil {
-		return query // RANK-03: zero relevant results → skip injection
+	// Skip re-ranking when --search is forced: trust all results.
+	// When the gate chose to search, re-rank to filter noise.
+	ranked := results
+	if !forceSearch {
+		sp3 := startSpinner("Filtering results...")
+		ranked, _ = reRankResults(query, results, cfg)
+		sp3.done()
+		if ranked == nil {
+			return query // RANK-03: zero relevant results → skip injection
+		}
 	}
 
 	budget := cfg.TokenThreshold / 4 // 25% reserved for web context
