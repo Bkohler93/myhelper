@@ -1,65 +1,55 @@
 ---
 gsd_state_version: 1.0
-milestone: v3.3
-milestone_name: Rich Chat UX
-status: complete
+milestone: v4.0
+milestone_name: Search-First Simplification
+status: planning
 stopped_at: ""
 last_updated: "2026-04-25T00:00:00Z"
 last_activity: 2026-04-25
 progress:
-  total_phases: 2
-  completed_phases: 2
-  total_plans: 2
-  completed_plans: 2
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-04-24)
+See: .planning/PROJECT.md (updated 2026-04-25)
 
 **Core value:** Fast, local chat with optional web search for current information — powered by a local Ollama model, no external API dependencies required.
-**Current focus:** v3.3 Rich Chat UX — COMPLETE (Phases 24-25 shipped 2026-04-25)
+**Current focus:** v4.0 Search-First Simplification — Defining requirements
 
 ## Current Position
 
-Phase: 25 — Markdown Rendering
-Plan: 01
-Status: Complete
-Last activity: 2026-04-25 — All phases complete; milestone v3.3 ready for lifecycle
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-04-25 — Milestone v4.0 started
 
 ```
-Progress: [==================] 100% (2/2 phases, 2/2 plans)
+Progress: [                  ] 0% (0/? phases, 0/? plans)
 ```
 
 ## Accumulated Context
 
 ### Decisions
 
-- TTY check uses `os.Stdin.Fd()` not `stdinReader` seam — seam is io.Reader, has no Fd(); keeps test path clean
-- `DisableAutoSaveHistory: true` + `rl.SaveHistory(joinedInput)` — prevents intermediate continuation lines from polluting history
-- `readline.ErrInterrupt` and `io.EOF` both return nil from runConversationLoop — clean exit semantics match bufio EOF
-- `sigCh` handler kept for bufio path only — readline intercepts Ctrl+C at raw-mode level before POSIX signal
-- Phase 25: glamour.NewTermRenderer(WithAutoStyle()) used — not glamour.Render(in, "auto") which rejects WithAutoStyle as style string
-- Phase 25: done() called before fmt.Fprint(os.Stdout, rendered) — prevents spinner/glamour output interleave on stderr+stdout
-- Phase 25: render_test.go uses package ollama (internal) to test unexported renderMarkdown — not package ollama_test
-- Phase 25: TestRenderMarkdown non-empty subtest checks text presence not ** removal — glamour ASCII style in non-TTY test env preserves markers
-- Phase 25: \033[s/\033[u\033[J erase-and-replace — tokens stream visibly then are replaced by glamour-rendered output
-- Phase 25: startSpinner(label) generic helper with blocking done func — prevents stderr/stdout interleave for both Generating... and Rendering... spinners
-- `joinContinuationLines` extracted as package-level pure helper — enables unit testing without a TTY
-- `fmt.Fprint(os.Stderr, "> ")` removed from bufio path — non-interactive path needs no prompt
+- `inspect` must make real LLM + SearXNG calls to show actual gate/fetch/re-rank results — it is a diagnostic mode, not a simulation
+- `reRankResults` error path returns all results as fallback (RANK-02) — inspect should surface this distinction
+- `buildWebBlock` drops trailing results to fit token budget — inspect should show token count of the preview block
+- Dead packages (context/planner/retrieval/scanner) have no imports from any live cmd/ file except `inspect.go` importing `retrieval` — safe to delete after inspect rewrite
 
 ### Key Implementation Notes (for planners)
 
-- `chzyer/readline v1.5.1` is now a direct dependency in go.mod
-- `runConversationLoop` in `cmd/helpers.go` has a TTY gate: readline path for real TTY, bufio path for pipes/tests
-- `stdinReader` test seam is untouched — tests continue to exercise the bufio path automatically
-- `joinContinuationLines` and `readMultiLine` are package-level helpers in cmd/helpers.go
-- Arrow keys, Home/End, and in-session history navigation are native to readline (no application code needed)
-- StreamChat TTY path: Generating... spinner → tokens stream → \033[u\033[J erase → Rendering... spinner → glamour output
-- StreamChat non-TTY path: tokens stream → Fprintln (unchanged from pre-v3.3)
+- `cmd/search.go` contains all the search pipeline logic (`searchGate`, `reRankResults`, `buildWebBlock`, `buildUserMessage`, `startSpinner`)
+- `cmd/inspect.go` currently imports `internal/retrieval` — this import must be replaced entirely
+- `--search` and `--no-search` flags are already defined in `root.go` and available to all subcommands
+- `cmd/root.go` defines `noContextFlag` var and `--no-context` persistent flag — both must be removed
+- After deleting dead packages, run `go mod tidy` to ensure go.sum stays clean
 
 ### Blockers/Concerns
 
@@ -74,7 +64,16 @@ Items deferred from v3.2:
 | verification | Phase 21: 21-VERIFICATION.md [human_needed] — live `myhelper inspect` smoke test against real .myhelper/ artifacts + Ollama | deferred |
 | verification | Phase 22: 22-VERIFICATION.md [human_needed] — live spinner clear test on real TTY with Ollama+SearXNG | deferred |
 
+## Deferred Items
+
+Items deferred from v3.3:
+
+| Category | Item | Status |
+|----------|------|--------|
+| verification | Phase 21: 21-VERIFICATION.md [human_needed] — live `myhelper inspect` smoke test against real .myhelper/ artifacts + Ollama | deferred (moot after v4.0 inspect rewrite) |
+| verification | Phase 22: 22-VERIFICATION.md [human_needed] — live spinner clear test on real TTY with Ollama+SearXNG | deferred |
+
 ## Session Continuity
 
 Last session: 2026-04-25
-Stopped at: v3.3 complete — all phases done, entering lifecycle (audit → complete → cleanup)
+Stopped at: v4.0 milestone started — requirements defined, roadmap pending

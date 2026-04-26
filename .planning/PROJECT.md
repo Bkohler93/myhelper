@@ -8,13 +8,14 @@ A Go CLI that provides fast, local-model-powered chat (`myhelper chat`) with opt
 
 Fast, local chat with optional web search for current information — powered by a local Ollama model, no external API dependencies required.
 
-## Current Milestone: v3.3 Rich Chat UX
+## Current Milestone: v4.0 Search-First Simplification
 
-**Goal:** Replace the raw stdin loop with a proper editing experience and render model responses as formatted markdown.
+**Goal:** Remove the dead .myhelper/ retrieval pipeline and rewrite `inspect` to show the full web search decision path.
 
 **Target features:**
-- Readline-style input — arrow keys, backspace, history navigation; Enter submits, Shift+Enter inserts a newline
-- Markdown rendering — responses stream as raw tokens, then re-render as formatted markdown after stream completes
+- Purge dead packages: `internal/context`, `internal/planner`, `internal/retrieval`, `internal/scanner`
+- Remove `--no-context` flag (no longer meaningful without retrieval pipeline)
+- Rewrite `inspect` as a web search diagnostic dry-run: gate decision, fetched results, re-rank survivors vs dropped, injected block preview
 
 ## Requirements
 
@@ -62,11 +63,15 @@ Fast, local chat with optional web search for current information — powered by
 - ✓ `countTokens` duplicate removed; `pkgs` param removed from `llmReRank`; `CallEdges`/`TypeRefs` reserved — v3.2
 - ✓ `microPassFile` uses stored `Symbol.Start/End` — eliminates per-call AST re-parse — v3.2
 
+- ✓ Readline-style input with line editing (arrow keys, backspace, history) — v3.3
+- ✓ Multi-line input: `\`-continuation with bare Enter to submit — v3.3
+- ✓ Markdown rendering of model responses after stream completes (glamour, erase-and-replace) — v3.3
+
 ### Active
 
-- Readline-style input with line editing (arrow keys, backspace, history) — v3.3
-- Multi-line input: Enter = submit, Shift+Enter = newline — v3.3
-- Markdown rendering of model responses after stream completes — v3.3
+- Delete `internal/context`, `internal/planner`, `internal/retrieval`, `internal/scanner` packages — v4.0
+- Remove `--no-context` flag from root.go — v4.0
+- `myhelper inspect <query>` prints web search gate decision, fetched results, re-rank results, and injected block preview — v4.0
 
 ### Out of Scope
 
@@ -86,7 +91,7 @@ Fast, local chat with optional web search for current information — powered by
 - **Retrieval constraint**: context must fit within ~80% of token threshold after system + history
 - **User workflow**: Developer runs tool inside a Go project; `init` builds structured index; query commands retrieve minimal context and expand as needed
 - **Primary use case**: Solo developer productivity tool; local-only execution
-- **Codebase state (v3.2)**: ~7,781 LOC Go total (source + tests); includes `internal/search/`, `cmd/search.go` web search pipeline, `cmd/inspect.go` dry-run diagnostics
+- **Codebase state (v3.3)**: `cmd/`: chat, inspect, search, helpers, root; `internal/`: config, context, history, ollama, planner, retrieval, scanner, search (context/planner/retrieval/scanner are dead — scheduled for removal in v4.0)
 - **Tech stack**: Go, cobra, bufio scanner (NDJSON streaming), go-tiktoken, go/ast, JSON-based index, `internal/retrieval` pipeline, SearXNG JSON API
 - **Known tech debt (v3.2)**:
   - `Symbol.CallEdges`/`TypeRefs` stored but not consumed — documented as reserved for future ranking
@@ -139,4 +144,4 @@ This document evolves at milestone boundaries.
 4. Context + architecture update
 
 ---
-*Last updated: 2026-04-24 — v3.3 milestone started; Rich Chat UX (readline input + markdown rendering)*
+*Last updated: 2026-04-25 — v4.0 milestone started; Search-First Simplification (dead package purge + inspect rewrite)*
