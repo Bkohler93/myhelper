@@ -168,7 +168,7 @@ Plans:
 **Goal**: `myhelper inspect <query>` is a useful web search diagnostic that shows exactly what the search pipeline would do for a given query
 **Depends on**: Phase 26
 **Requirements**: INSP-01, INSP-02, INSP-03, INSP-04, INSP-05, INSP-06, INSP-07
-**Plans**: TBD
+**Plans**: 1 plan
 **Success Criteria** (what must be TRUE):
   1. Running `myhelper inspect <query>` prints the gate LLM's YES/NO decision and its raw answer text
   2. When the gate says NO (search not needed), inspect prints a "search not needed" message and exits without fetching results
@@ -177,6 +177,9 @@ Plans:
   5. Inspect prints the full `[WEB RESULTS]` block that would be injected into the chat context, followed by its token count
   6. `--search` forces inspect to bypass the gate and run the complete fetch → re-rank → preview pipeline regardless of the gate decision
   7. `--no-search` causes inspect to print "search suppressed" and exit immediately without calling the gate or fetching results
+
+Plans:
+- [ ] 27-01-PLAN.md — full inspect rewrite: gate output, fetch output, re-rank groups, injected block preview, token cost
 
 ## Progress
 
@@ -208,4 +211,4 @@ Plans:
 | 24. Readline Input | v3.3 | 1/1 | Complete | 2026-04-25 |
 | 25. Markdown Rendering | v3.3 | 1/1 | Complete | 2026-04-25 |
 | 26. Dead Code Purge | v4.0 | 1/1 | Complete | 2026-04-26 |
-| 27. Inspect Rewrite | v4.0 | 0/TBD | Not started | - |
+| 27. Inspect Rewrite | v4.0 | 0/1 | Not started | - |
