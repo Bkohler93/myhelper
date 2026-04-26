@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v3.3
 milestone_name: Rich Chat UX
 status: in_progress
-stopped_at: "24-01 automated tasks complete — awaiting human-verify checkpoint (Task 3)"
-last_updated: "2026-04-25T02:19:56Z"
+stopped_at: "Phase 25 Plan 01 — checkpoint:human-verify (Task 3) — install binary and smoke-test rendering"
+last_updated: "2026-04-25T16:54:10Z"
 last_activity: 2026-04-25
 progress:
   total_phases: 2
-  completed_phases: 0
-  total_plans: 1
+  completed_phases: 1
+  total_plans: 2
   completed_plans: 1
-  percent: 25
+  percent: 75
 ---
 
 # Project State
@@ -25,13 +25,13 @@ See: .planning/PROJECT.md (updated 2026-04-24)
 
 ## Current Position
 
-Phase: 24 — Readline Input
-Plan: 01 — complete (awaiting human-verify checkpoint)
-Status: In progress — checkpoint reached
-Last activity: 2026-04-25 — 24-01 automated tasks complete
+Phase: 25 — Markdown Rendering
+Plan: 01
+Status: In progress — awaiting checkpoint:human-verify (Task 3)
+Last activity: 2026-04-25 — Phase 25 Plan 01 Tasks 1+2 complete; checkpoint awaiting human approval
 
 ```
-Progress: [=====-----] 25% (0/2 phases, 1/1 plans in phase 24)
+Progress: [===============   ] 75% (1/2 phases, 1/2 plans)
 ```
 
 ## Accumulated Context
@@ -42,6 +42,10 @@ Progress: [=====-----] 25% (0/2 phases, 1/1 plans in phase 24)
 - `DisableAutoSaveHistory: true` + `rl.SaveHistory(joinedInput)` — prevents intermediate continuation lines from polluting history
 - `readline.ErrInterrupt` and `io.EOF` both return nil from runConversationLoop — clean exit semantics match bufio EOF
 - `sigCh` handler kept for bufio path only — readline intercepts Ctrl+C at raw-mode level before POSIX signal
+- Phase 25: glamour.NewTermRenderer(WithAutoStyle()) used — not glamour.Render(in, "auto") which rejects WithAutoStyle as style string
+- Phase 25: done() called before fmt.Fprint(os.Stdout, rendered) — prevents spinner/glamour output interleave on stderr+stdout
+- Phase 25: render_test.go uses package ollama (internal) to test unexported renderMarkdown — not package ollama_test
+- Phase 25: TestRenderMarkdown non-empty subtest checks text presence not ** removal — glamour ASCII style in non-TTY test env preserves markers
 - `joinContinuationLines` extracted as package-level pure helper — enables unit testing without a TTY
 - `fmt.Fprint(os.Stderr, "> ")` removed from bufio path — non-interactive path needs no prompt
 
@@ -68,6 +72,6 @@ Items deferred from v3.2:
 
 ## Session Continuity
 
-Last session: 2026-04-25
-Stopped at: Phase 24, Plan 01 — checkpoint:human-verify (Task 3) — build and smoke test required
-Resume: Approve checkpoint then continue to Phase 25
+Last session: 2026-04-25T16:54:10Z
+Stopped at: Phase 25, Plan 01 — checkpoint:human-verify (Task 3) — install binary and smoke-test rendering
+Resume: Run `go install .` then `myhelper chat "explain recursion with a code example"` to verify RNDR-01/RNDR-02, then type "approved"

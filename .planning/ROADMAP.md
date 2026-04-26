@@ -136,7 +136,7 @@ Plans:
   2. Code blocks in the rendered response are visually distinct from prose text, with visible fence formatting
 
 Plans:
-- [ ] 25-01-PLAN.md — renderMarkdown helper, startRenderSpinner, StreamChat TTY gate + branch
+- [~] 25-01-PLAN.md — renderMarkdown helper, startRenderSpinner, StreamChat TTY gate + branch (Tasks 1-2 complete; awaiting checkpoint:human-verify)
 
 **UI hint**: yes
 
@@ -168,4 +168,4 @@ Plans:
 | 22. Search Pipeline Spinners | v3.2 | 1/1 | Complete | 2026-04-24 |
 | 23. Cleanup & Correctness | v3.2 | 2/2 | Complete | 2026-04-24 |
 | 24. Readline Input | v3.3 | 1/1 | Complete | 2026-04-25 |
-| 25. Markdown Rendering | v3.3 | 0/1 | Not started | - |
+| 25. Markdown Rendering | v3.3 | 0/1 | In progress (checkpoint) | - |
