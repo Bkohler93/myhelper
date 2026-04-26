@@ -113,7 +113,7 @@ Full archive: `.planning/milestones/v3.2-ROADMAP.md`
 
 ### v4.0 Search-First Simplification (Phases 26-27)
 
-- [ ] **Phase 26: Dead Code Purge** - Delete internal/context, internal/planner, internal/retrieval, internal/scanner and remove --no-context flag; verify clean build and tests
+- [x] **Phase 26: Dead Code Purge** - Delete internal/context, internal/planner, internal/retrieval, internal/scanner and remove --no-context flag; verify clean build and tests — completed 2026-04-26
 - [ ] **Phase 27: Inspect Rewrite** - Rewrite cmd/inspect.go as a web search diagnostic dry-run showing gate decision, fetched results, re-rank output, and injected block preview
 
 ## Phase Details
@@ -207,5 +207,5 @@ Plans:
 | 23. Cleanup & Correctness | v3.2 | 2/2 | Complete | 2026-04-24 |
 | 24. Readline Input | v3.3 | 1/1 | Complete | 2026-04-25 |
 | 25. Markdown Rendering | v3.3 | 1/1 | Complete | 2026-04-25 |
-| 26. Dead Code Purge | v4.0 | 0/1 | Not started | - |
+| 26. Dead Code Purge | v4.0 | 1/1 | Complete | 2026-04-26 |
 | 27. Inspect Rewrite | v4.0 | 0/TBD | Not started | - |
