@@ -114,7 +114,7 @@ Full archive: `.planning/milestones/v3.2-ROADMAP.md`
 ### v4.0 Search-First Simplification (Phases 26-27)
 
 - [x] **Phase 26: Dead Code Purge** - Delete internal/context, internal/planner, internal/retrieval, internal/scanner and remove --no-context flag; verify clean build and tests — completed 2026-04-26
-- [ ] **Phase 27: Inspect Rewrite** - Rewrite cmd/inspect.go as a web search diagnostic dry-run showing gate decision, fetched results, re-rank output, and injected block preview
+- [x] **Phase 27: Inspect Rewrite** - Rewrite cmd/inspect.go as a web search diagnostic dry-run showing gate decision, fetched results, re-rank output, and injected block preview — completed 2026-04-26
 
 ## Phase Details
 
@@ -179,7 +179,7 @@ Plans:
   7. `--no-search` causes inspect to print "search suppressed" and exit immediately without calling the gate or fetching results
 
 Plans:
-- [ ] 27-01-PLAN.md — full inspect rewrite: gate output, fetch output, re-rank groups, injected block preview, token cost
+- [x] 27-01-PLAN.md — full inspect rewrite: gate output, fetch output, re-rank groups, injected block preview, token cost
 
 ## Progress
 
@@ -211,4 +211,4 @@ Plans:
 | 24. Readline Input | v3.3 | 1/1 | Complete | 2026-04-25 |
 | 25. Markdown Rendering | v3.3 | 1/1 | Complete | 2026-04-25 |
 | 26. Dead Code Purge | v4.0 | 1/1 | Complete | 2026-04-26 |
-| 27. Inspect Rewrite | v4.0 | 0/1 | Not started | - |
+| 27. Inspect Rewrite | v4.0 | 1/1 | Complete | 2026-04-26 |
