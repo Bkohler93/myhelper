@@ -18,10 +18,10 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-04-25)
+See: .planning/PROJECT.md (updated 2026-04-26)
 
 **Core value:** Fast, local chat with optional web search for current information — powered by a local Ollama model, no external API dependencies required.
-**Current focus:** v4.0 Search-First Simplification — Defining requirements
+**Current focus:** v4.0 shipped — planning next milestone
 
 ## Current Position
 
@@ -38,18 +38,7 @@ Progress: [██████████████████] 100% (2/2 pha
 
 ### Decisions
 
-- `inspect` must make real LLM + SearXNG calls to show actual gate/fetch/re-rank results — it is a diagnostic mode, not a simulation
-- `reRankResults` error path returns all results as fallback (RANK-02) — inspect should surface this distinction
-- `buildWebBlock` drops trailing results to fit token budget — inspect should show token count of the preview block
-- Dead packages (context/planner/retrieval/scanner) have no imports from any live cmd/ file except `inspect.go` importing `retrieval` — safe to delete after inspect rewrite
-
-### Key Implementation Notes (for planners)
-
-- `cmd/search.go` contains all the search pipeline logic (`searchGate`, `reRankResults`, `buildWebBlock`, `buildUserMessage`, `startSpinner`)
-- `cmd/inspect.go` currently imports `internal/retrieval` — this import must be replaced entirely
-- `--search` and `--no-search` flags are already defined in `root.go` and available to all subcommands
-- `cmd/root.go` defines `noContextFlag` var and `--no-context` persistent flag — both must be removed
-- After deleting dead packages, run `go mod tidy` to ensure go.sum stays clean
+All v4.0 decisions are archived in `.planning/PROJECT.md` Key Decisions table. No active decisions for next milestone yet.
 
 ### Blockers/Concerns
 

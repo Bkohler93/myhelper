@@ -11,7 +11,7 @@
 - ✅ **v3.1 Web Search** — Phases 18-20 (shipped 2026-04-11)
 - ✅ **v3.2 Observability & Polish** — Phases 21-23 (shipped 2026-04-24)
 - ✅ **v3.3 Rich Chat UX** — Phases 24-25 (shipped 2026-04-25)
-- **v4.0 Search-First Simplification** — Phases 26-27 (active)
+- ✅ **v4.0 Search-First Simplification** — Phases 26-27 (shipped 2026-04-26)
 
 ## Phases
 
@@ -111,75 +111,15 @@ Full archive: `.planning/milestones/v3.2-ROADMAP.md`
 
 </details>
 
-### v4.0 Search-First Simplification (Phases 26-27)
+<details>
+<summary>✅ v4.0 Search-First Simplification (Phases 26-27) — SHIPPED 2026-04-26</summary>
 
-- [x] **Phase 26: Dead Code Purge** - Delete internal/context, internal/planner, internal/retrieval, internal/scanner and remove --no-context flag; verify clean build and tests — completed 2026-04-26
-- [x] **Phase 27: Inspect Rewrite** - Rewrite cmd/inspect.go as a web search diagnostic dry-run showing gate decision, fetched results, re-rank output, and injected block preview — completed 2026-04-26
+- [x] Phase 26: Dead Code Purge (1/1 plan) — completed 2026-04-26
+- [x] Phase 27: Inspect Rewrite (1/1 plan) — completed 2026-04-26
 
-## Phase Details
+Full archive: `.planning/milestones/v4.0-ROADMAP.md`
 
-### Phase 24: Readline Input
-**Goal**: Users interact with the chat loop through a proper line-editing experience with history and multi-line input
-**Depends on**: Nothing (continuing from v3.2 completed state)
-**Requirements**: INPUT-01, INPUT-02, INPUT-03, INPUT-04
-**Plans**: 1 plan
-**Success Criteria** (what must be TRUE):
-  1. User can press left/right arrow keys to move the cursor within the current input and backspace to delete a character
-  2. User can press Home/End to jump to the start or end of the current input line
-  3. User can press up/down arrow keys to cycle through previously submitted messages in the current session
-  4. User can type a line ending in \ to continue input on the next line; bare Enter submits
-  5. User presses bare Enter to submit the complete input (including any embedded newlines) to the model
-
-Plans:
-- [x] 24-01-PLAN.md — readline TTY gate, readMultiLine helper, continuation test
-
-**UI hint**: yes
-
-### Phase 25: Markdown Rendering
-**Goal**: Users read model responses rendered as formatted markdown rather than raw token output
-**Depends on**: Phase 24
-**Requirements**: RNDR-01, RNDR-02
-**Plans**: 1 plan
-**Success Criteria** (what must be TRUE):
-  1. After a model response finishes streaming, the raw output is replaced by a formatted markdown rendering of the complete response
-  2. Code blocks in the rendered response are visually distinct from prose text, with visible fence formatting
-
-Plans:
-- [x] 25-01-PLAN.md — renderMarkdown helper, startSpinner, StreamChat TTY gate + erase-and-replace (all tasks complete)
-
-**UI hint**: yes
-
-### Phase 26: Dead Code Purge
-**Goal**: The codebase contains only live, used packages — dead retrieval infrastructure is gone and the build is clean
-**Depends on**: Phase 25
-**Requirements**: PURGE-01, PURGE-02, PURGE-03, PURGE-04, PURGE-05, PURGE-06
-**Plans**: 1 plan
-**Success Criteria** (what must be TRUE):
-  1. `internal/context`, `internal/planner`, `internal/retrieval`, and `internal/scanner` directories no longer exist in the repository
-  2. `cmd/root.go` contains no `--no-context` flag declaration or `noContextFlag` variable
-  3. `go build ./...` completes with no errors and no warnings after all deletions
-  4. `go test ./...` passes with no failures (tests referencing deleted packages are also removed)
-  5. `go mod tidy` produces no changes to go.mod or go.sum
-
-Plans:
-- [ ] 26-01-PLAN.md — stub inspect, remove noContextFlag, delete dead packages, verify build
-
-### Phase 27: Inspect Rewrite
-**Goal**: `myhelper inspect <query>` is a useful web search diagnostic that shows exactly what the search pipeline would do for a given query
-**Depends on**: Phase 26
-**Requirements**: INSP-01, INSP-02, INSP-03, INSP-04, INSP-05, INSP-06, INSP-07
-**Plans**: 1 plan
-**Success Criteria** (what must be TRUE):
-  1. Running `myhelper inspect <query>` prints the gate LLM's YES/NO decision and its raw answer text
-  2. When the gate says NO (search not needed), inspect prints a "search not needed" message and exits without fetching results
-  3. When the gate says YES, inspect prints every fetched SearXNG result with its title, URL, and snippet
-  4. Inspect prints re-rank output as two labeled groups: survivors (kept) and dropped results, so the user can see what was filtered
-  5. Inspect prints the full `[WEB RESULTS]` block that would be injected into the chat context, followed by its token count
-  6. `--search` forces inspect to bypass the gate and run the complete fetch → re-rank → preview pipeline regardless of the gate decision
-  7. `--no-search` causes inspect to print "search suppressed" and exit immediately without calling the gate or fetching results
-
-Plans:
-- [x] 27-01-PLAN.md — full inspect rewrite: gate output, fetch output, re-rank groups, injected block preview, token cost
+</details>
 
 ## Progress
 

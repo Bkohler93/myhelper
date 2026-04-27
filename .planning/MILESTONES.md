@@ -1,5 +1,20 @@
 # Milestones
 
+## v4.0 Search-First Simplification (Shipped: 2026-04-26)
+
+**Phases completed:** 2 phases (26–27), 2 plans, ~5 tasks
+**Files changed:** 24 Go files, +86 / -5,552 lines (net −5,466 — massive dead code removal)
+**Timeline:** 2026-04-25 → 2026-04-26 (2 days)
+
+**Key accomplishments:**
+
+- Deleted 22 files across 4 dead internal packages (`internal/context`, `internal/planner`, `internal/retrieval`, `internal/scanner`) — ~5,500 lines of unused retrieval infrastructure gone (Phase 26)
+- Removed `--no-context` flag and `noContextFlag` var from `cmd/root.go` — flag was only meaningful alongside the deleted retrieval pipeline (Phase 26)
+- Rewrote `cmd/inspect.go` as a web search diagnostic dry-run: gate decision (YES/NO/BYPASSED), all fetched SearXNG results, re-rank Survivors/Dropped groups, full `[WEB RESULTS]` block with token cost — all without sending to the chat model (Phase 27)
+- `go build ./...`, `go test ./...`, and `go mod tidy` all pass clean after all deletions (Phase 26)
+
+---
+
 ## v3.2 Observability & Polish (Shipped: 2026-04-24)
 
 **Phases completed:** 3 phases (21–23), 5 plans

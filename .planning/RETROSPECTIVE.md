@@ -213,6 +213,42 @@
 
 ---
 
+## Milestone: v4.0 — Search-First Simplification
+
+**Shipped:** 2026-04-26
+**Phases:** 2 (26-27) | **Plans:** 2
+
+### What Was Built
+- Deleted `internal/context`, `internal/planner`, `internal/retrieval`, `internal/scanner` — 22 files, ~5,500 lines of dead retrieval infrastructure removed
+- Removed `--no-context` flag from root.go (was only meaningful with the deleted retrieval pipeline)
+- Rewrote `cmd/inspect.go` as a full web search diagnostic: gate → fetch → re-rank → block preview with token cost; `--search` bypasses gate; `--no-search` exits immediately
+
+### What Worked
+- Pre-deletion grep gate: confirmed zero live imports before deleting packages — clean execution, no surprises
+- Stub-then-rewrite pattern for inspect: Phase 26 stubbed inspect.go with cobra registration intact; Phase 27 replaced the body entirely without touching wiring — clean two-phase handoff
+- Live smoke test at checkpoint: user confirmed all three test cases in one session before committing
+- Autonomous workflow end-to-end: discuss → plan → execute → audit → complete in one session
+
+### What Was Inefficient
+- CLAUDE.md documentation drift: architecture section still describes deleted packages after v4.0 — low-friction fix deferred as tech debt; should be caught at milestone close more reliably
+- REQUIREMENTS.md traceability checkboxes remained unchecked throughout development — all Pending at archive time; actual status was satisfied but traceability table didn't reflect it
+
+### Patterns Established
+- Pre-deletion grep gate: always verify `grep -r 'internal/pkg' cmd/` returns zero before deleting — prevents broken build surprises
+- Inspect as web diagnostic (not retrieval diagnostic): `myhelper inspect` now shows the search pipeline decisions that are actually relevant in v4.0+ architecture
+
+### Key Lessons
+1. When direction shifts (retrieval → web-search-first), clean up aggressively in the next milestone — 5,500 lines of dead code accumulated across 4 packages before v4.0 removed them; the sooner the cut, the cheaper the carry cost
+2. The stub-then-rewrite pattern works cleanly for command rewrites that span phases: keep cobra registration in Phase N, replace body in Phase N+1
+3. Live smoke test before commit is the right checkpoint for diagnostic commands — unit tests can't fully substitute for watching the actual pipeline output
+
+### Cost Observations
+- Model mix: sonnet throughout (autonomous mode)
+- Sessions: 1 focused session
+- Notable: net −5,466 lines; smallest-LOC milestone yet despite shipping two complete phases
+
+---
+
 ## Cross-Milestone Trends
 
 ### Process Evolution
@@ -225,6 +261,7 @@
 | v1.3 | 2 | 5 | Structured retrieval pipeline; artifact index; per-command strategies; 66 commits |
 | v3.1 | 1 | 3 | SearXNG client + search gate + re-rank; chat+web-search primary identity established |
 | v3.2 | 1 | 3 | inspect command + spinners + debt cleanup; fastest milestone yet (single day, 5 plans) |
+| v4.0 | 1 | 2 | Dead retrieval pipeline deleted (−5,500 lines); inspect rewritten as web diagnostic |
 
 ### Cumulative Quality
 
@@ -235,6 +272,7 @@
 | v1.2 | 2,331 LOC tests | all packages | test LOC exceeds source LOC; integration (live Ollama) still manual |
 | v1.3 | ~2,900 LOC tests | all packages | 13 retrieval unit tests; Phase 11 VERIFICATION.md gap; integration still manual |
 | v3.2 | ~2,900 LOC tests (unchanged) | all packages | no new tests; debt cleanup + wiring; pre-existing planner fixture failure unrelated |
+| v4.0 | ~1,400 LOC tests (deleted ~1,500 with dead packages) | cmd, config, history, ollama, search | all 5 packages pass; retrieval/scanner/context/planner tests deleted with packages |
 
 ### Top Lessons (Verified Across Milestones)
 
@@ -246,3 +284,5 @@
 6. VERIFICATION.md files should be created immediately after each phase — deferred verification becomes invisible tech debt
 7. Before writing a fix for a suspected bug, grep callers first — sometimes the bug path doesn't exist (CTX-03: no code change needed)
 8. A dedicated cleanup phase at milestone end is a strong pattern — explicit bug/removal requirements execute fast with low risk
+9. When architecture shifts, delete dead code aggressively — the longer you carry it, the higher the carry cost; v4.0's net −5,466 lines proves the payoff
+10. Stub-then-rewrite across phases works cleanly for command rewrites: keep cobra registration in phase N, replace body in phase N+1
