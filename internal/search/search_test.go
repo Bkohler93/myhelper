@@ -224,8 +224,9 @@ func TestSearch_Errors(t *testing.T) {
 func TestLoadConfig(t *testing.T) {
 	t.Run("default_when_no_env_no_file", func(t *testing.T) {
 		t.Chdir(t.TempDir())
-		// Ensure env var is unset
+		// Ensure env vars are unset
 		t.Setenv("MYHELPER_SEARCH_ENDPOINT", "")
+		t.Setenv("MYHELPER_SEARCH_PROVIDER", "")
 		cfg := search.LoadConfig()
 		if cfg.Endpoint != search.DefaultSearchEndpoint {
 			t.Errorf("expected default endpoint %q, got %q", search.DefaultSearchEndpoint, cfg.Endpoint)
@@ -235,6 +236,7 @@ func TestLoadConfig(t *testing.T) {
 	t.Run("env_var_overrides_default", func(t *testing.T) {
 		t.Chdir(t.TempDir())
 		t.Setenv("MYHELPER_SEARCH_ENDPOINT", "http://custom:9999")
+		t.Setenv("MYHELPER_SEARCH_PROVIDER", "")
 		cfg := search.LoadConfig()
 		if cfg.Endpoint != "http://custom:9999" {
 			t.Errorf("expected endpoint 'http://custom:9999', got %q", cfg.Endpoint)
@@ -423,6 +425,7 @@ func TestLoadConfig_TavilyKeyEnvVar(t *testing.T) {
 		t.Chdir(t.TempDir())
 		t.Setenv("MYHELPER_TAVILY_KEY", "tvly-testkey")
 		t.Setenv("MYHELPER_SEARCH_ENDPOINT", "") // isolate from any real config
+		t.Setenv("MYHELPER_SEARCH_PROVIDER", "")
 		cfg := search.LoadConfig()
 		if cfg.TavilyKey != "tvly-testkey" {
 			t.Errorf("expected TavilyKey 'tvly-testkey', got %q", cfg.TavilyKey)
@@ -432,6 +435,7 @@ func TestLoadConfig_TavilyKeyEnvVar(t *testing.T) {
 	t.Run("auto_selects_tavily_when_key_present", func(t *testing.T) {
 		t.Chdir(t.TempDir())
 		t.Setenv("MYHELPER_TAVILY_KEY", "tvly-testkey")
+		t.Setenv("MYHELPER_SEARCH_PROVIDER", "")
 		// Do not set MYHELPER_SEARCH_ENDPOINT so Provider remains empty (relying on auto-select)
 		cfg := search.LoadConfig()
 		// auto-select: TavilyKey non-empty + no explicit Provider → "tavily"
@@ -443,6 +447,7 @@ func TestLoadConfig_TavilyKeyEnvVar(t *testing.T) {
 	t.Run("no_key_defaults_to_searxng", func(t *testing.T) {
 		t.Chdir(t.TempDir())
 		t.Setenv("MYHELPER_TAVILY_KEY", "")
+		t.Setenv("MYHELPER_SEARCH_PROVIDER", "")
 		cfg := search.LoadConfig()
 		if cfg.Provider != "searxng" {
 			t.Errorf("expected Provider 'searxng' when no key, got %q", cfg.Provider)
