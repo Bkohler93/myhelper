@@ -10,10 +10,13 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 const DefaultSearchEndpoint = "http://192.168.0.9:8083"
 const DefaultTavilyEndpoint = "https://api.tavily.com/search"
+
+var httpClient = &http.Client{Timeout: 15 * time.Second}
 
 // Config holds the resolved search configuration.
 type Config struct {
@@ -150,7 +153,7 @@ func searxngSearch(query string, cfg Config) ([]Result, error) {
 
 	reqURL := strings.TrimRight(endpoint, "/") + "/search?q=" + url.QueryEscape(query) + "&format=json&pageno=1&num_results=10"
 
-	resp, err := http.Get(reqURL)
+	resp, err := httpClient.Get(reqURL)
 	if err != nil {
 		return nil, fmt.Errorf("GET %s: %w", reqURL, err)
 	}
@@ -211,7 +214,7 @@ func tavilySearch(query string, cfg Config) ([]Result, error) {
 	// TavilyKey is the Bearer token; never interpolated into URL or body — kept in header only.
 	req.Header.Set("Authorization", "Bearer "+cfg.TavilyKey)
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := httpClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("POST tavily: %w", err)
 	}
