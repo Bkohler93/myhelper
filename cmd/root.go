@@ -17,6 +17,17 @@ var (
 	tokenLimitFlag int
 )
 
+// Version info — set by goreleaser ldflags at build time:
+//
+//	-X github.com/bkohler93/myhelper/cmd.Version={{.Version}}
+//	-X github.com/bkohler93/myhelper/cmd.Commit={{.Commit}}
+//	-X github.com/bkohler93/myhelper/cmd.Date={{.Date}}
+var (
+	Version = "dev"
+	Commit  = "none"
+	Date    = "unknown"
+)
+
 func init() {
 	rootCmd.PersistentFlags().BoolVar(&searchForce, "search", false, "Force web search regardless of gate result")
 	rootCmd.PersistentFlags().BoolVar(&searchSuppress, "no-search", false, "Suppress web search entirely")
@@ -27,6 +38,7 @@ var rootCmd = &cobra.Command{
 	Use:               "myhelper [question]",
 	Short:             "A focused chat assistant backed by a local Ollama model",
 	Long:              "myhelper sends messages to a local Ollama server and streams responses to stdout.\n\nRun with no arguments to start an interactive REPL, or pass a question to get a one-shot response.",
+	Version:           Version,
 	CompletionOptions: cobra.CompletionOptions{HiddenDefaultCmd: true},
 	Args:              cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
