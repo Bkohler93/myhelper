@@ -26,6 +26,9 @@ func runInspect(cmd *cobra.Command, args []string) error {
 	query := args[0]
 	cfg := config.Load()
 	ApplyFlagOverrides(&cfg)
+	if err := validateConfig(cfg); err != nil {
+		return err
+	}
 	searchCfg := search.LoadConfig()
 
 	if searchSuppress {

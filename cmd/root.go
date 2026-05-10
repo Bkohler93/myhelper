@@ -29,6 +29,8 @@ var (
 )
 
 func init() {
+	rootCmd.SilenceErrors = true
+	rootCmd.SilenceUsage = true
 	rootCmd.PersistentFlags().BoolVar(&searchForce, "search", false, "Force web search regardless of gate result")
 	rootCmd.PersistentFlags().BoolVar(&searchSuppress, "no-search", false, "Suppress web search entirely")
 	rootCmd.PersistentFlags().IntVar(&tokenLimitFlag, "token-limit", 0, "override token threshold for conversation history (default 4100)")
@@ -44,6 +46,9 @@ var rootCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg := config.Load()
 		ApplyFlagOverrides(&cfg)
+		if err := validateConfig(cfg); err != nil {
+			return err
+		}
 		searchCfg := search.LoadConfig() // load once, capture in closure (Pitfall 6)
 		hist := history.New(cfg.TokenThreshold, nil)
 
