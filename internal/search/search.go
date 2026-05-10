@@ -22,6 +22,7 @@ var httpClient = &http.Client{Timeout: 15 * time.Second}
 type Config struct {
 	Endpoint       string `json:"search_endpoint"`
 	Provider       string `json:"search_provider"` // "tavily" | "searxng"
+	// TavilyKey holds the Tavily Bearer token. Do not log or serialize to user-facing output.
 	TavilyKey      string `json:"tavily_key"`
 	TavilyEndpoint string `json:"tavily_endpoint"` // overridable for tests; defaults to DefaultTavilyEndpoint
 }
