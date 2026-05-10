@@ -76,7 +76,7 @@ func Execute() {
 
 // ApplyFlagOverrides applies CLI flag values to cfg, overriding config-file values.
 func ApplyFlagOverrides(cfg *config.Config) {
-	if tokenLimitFlag != 0 {
+	if tokenLimitFlag > 0 {
 		cfg.TokenThreshold = tokenLimitFlag
 	}
 }
