@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v5.1
 milestone_name: Configuration Validation & Setup Hardening
-status: planning
+status: in_progress
 stopped_at: ""
 last_updated: "2026-05-10T00:00:00Z"
 last_activity: 2026-05-10
 progress:
   total_phases: 2
-  completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
-  percent: 0
+  completed_phases: 1
+  total_plans: 2
+  completed_plans: 2
+  percent: 50
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-10)
 
 **Core value:** Fast, local AI chat with optional web search — inference runs locally via Ollama, search is pluggable (Tavily or self-hosted SearXNG), no cloud AI required.
-**Current focus:** v5.1 — Phase 31: Config Loading & Startup Validation
+**Current focus:** v5.1 — Phase 32: Setup Wizard Hardening
 
 ## Current Position
 
-Phase: 31 of 32 (Config Loading & Startup Validation)
+Phase: 32 of 32 (Setup Wizard Hardening)
 Plan: —
-Status: Ready to plan
-Last activity: 2026-05-10 — Roadmap created for v5.1
+Status: Ready to discuss/plan
+Last activity: 2026-05-10 — Phase 31 complete (Config Loading & Startup Validation)
 
-Progress: `░░░░░░░░░░` 0%
+Progress: `█████░░░░░` 50%
 
 ## Accumulated Context
 
@@ -42,6 +42,7 @@ v5.1 key design decisions:
 - Hard fail (not auto-redirect) on missing config — simpler, more predictable than silently launching setup
 - Env vars (`MYHELPER_MODEL`, `MYHELPER_ENDPOINT`) count as "set" for validation purposes
 - `myhelper config set` subcommand is out of scope — setup is the only user-facing config path
+- Phase 31: validateConfig() in cmd package gates chat/inspect before any Ollama calls; SilenceErrors=true prevents cobra double-print
 
 ### Blockers/Concerns
 
@@ -57,4 +58,4 @@ None.
 ## Session Continuity
 
 Last session: 2026-05-10
-Stopped at: v5.1 roadmap written — ready to plan Phase 31
+Stopped at: Phase 31 verified and complete — ready to discuss/plan Phase 32

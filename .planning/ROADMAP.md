@@ -138,7 +138,7 @@ Full archive: `.planning/milestones/v5.0-ROADMAP.md`
 
 **Milestone Goal:** Remove all hardcoded model/endpoint defaults and fail fast with clear errors when required config is missing — myhelper should never silently use a model the user didn't choose.
 
-- [ ] **Phase 31: Config Loading & Startup Validation** - Remove hardcoded defaults; hard-fail chat/inspect/search when model or endpoint is unset
+- [x] **Phase 31: Config Loading & Startup Validation** (2/2 plans) — completed 2026-05-10
 - [ ] **Phase 32: Setup Wizard Hardening** - Ensure wizard always exits with a valid model and non-empty endpoint in config
 
 ## Phase Details
@@ -154,8 +154,8 @@ Full archive: `.planning/milestones/v5.0-ROADMAP.md`
   4. Config loading never returns a non-empty default for model or endpoint — the fields are empty string when unset in both config file and env
 **Plans**: 2 plans
 Plans:
-- [ ] 31-01-PLAN.md — Remove hardcoded defaults from config.Load() and add CFG-01/CFG-02 tests
-- [ ] 31-02-PLAN.md — Add validateConfig helper and call sites in root.go and inspect.go
+- [x] 31-01-PLAN.md — Remove hardcoded defaults from config.Load() and add CFG-01/CFG-02 tests
+- [x] 31-02-PLAN.md — Add validateConfig helper and call sites in root.go and inspect.go
 
 ### Phase 32: Setup Wizard Hardening
 **Goal**: The setup wizard is guaranteed to write a usable model and endpoint to config before it exits — no more silent exit leaving the user with an incomplete config
@@ -201,5 +201,5 @@ Plans:
 | 28. Distribution | v5.0 | 3/3 | Complete | 2026-05-09 |
 | 29. Tavily Search Provider | v5.0 | 1/1 | Complete | 2026-05-10 |
 | 30. Setup Wizard | v5.0 | 2/2 | Complete | 2026-05-10 |
-| 31. Config Loading & Startup Validation | v5.1 | 0/2 | Not started | - |
+| 31. Config Loading & Startup Validation | v5.1 | 2/2 | Complete | 2026-05-10 |
 | 32. Setup Wizard Hardening | v5.1 | 0/? | Not started | - |
