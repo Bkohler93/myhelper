@@ -90,10 +90,14 @@ func loadFile(path string) (Config, bool) {
 	}
 	data, err := os.ReadFile(path)
 	if err != nil {
+		if !os.IsNotExist(err) {
+			fmt.Fprintf(os.Stderr, "warning: could not read config %s: %v\n", path, err)
+		}
 		return Config{}, false
 	}
 	var c Config
 	if err := json.Unmarshal(data, &c); err != nil {
+		fmt.Fprintf(os.Stderr, "warning: config %s contains invalid JSON: %v\n", path, err)
 		return Config{}, false
 	}
 	return c, true
