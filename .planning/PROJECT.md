@@ -2,11 +2,22 @@
 
 ## What This Is
 
-A Go CLI that provides fast, local-model-powered chat (`myhelper chat`) with optional web search augmentation via SearXNG. For queries needing current information, the tool automatically gates on a yes/no LLM call, fetches and re-ranks results, then injects surviving snippets into the context before the model responds. `myhelper inspect <query>` is a diagnostic dry-run that prints the full web search decision path — gate, fetch, re-rank, injected block, and token cost — without sending anything to the chat model. No external API dependencies — all inference is local Ollama.
+A Go CLI that provides fast, local-model-powered chat (`myhelper chat`) with optional web search augmentation. For queries needing current information, the tool automatically gates on a yes/no LLM call, fetches results from Tavily or a self-hosted SearXNG instance, re-ranks them, and injects surviving snippets into context before the model responds. `myhelper inspect <query>` is a diagnostic dry-run that prints the full web search decision path — gate, fetch, re-rank, injected block, and token cost — without calling the chat model. All inference runs locally via Ollama — no cloud AI required.
 
 ## Core Value
 
-Fast, local chat with optional web search for current information — powered by a local Ollama model, no external API dependencies required.
+Fast, local AI chat with optional web search — inference runs locally via Ollama, search is pluggable (Tavily or self-hosted SearXNG), no cloud AI required.
+
+## Current Milestone: v5.0 Distribution & First-Run Setup
+
+**Goal:** Package myhelper for reliable cross-platform installation (macOS + WSL/Linux) and make the first-run experience self-guiding from zero to working chat in a single command.
+
+**Target features:**
+- goreleaser + GitHub Actions release workflow → versioned pre-built binaries for darwin/amd64, darwin/arm64, linux/amd64, linux/arm64 + auto-generated Homebrew tap
+- `myhelper setup` interactive wizard — detects Ollama install, guides install if missing, detects GPU/RAM, recommends and pulls the right model, prompts for Tavily API key, writes config
+- Hardware-aware model recommendation — nvidia-smi (WSL/Linux), system_profiler (macOS), RAM fallback for CPU-only
+- Tavily as default search provider; SearXNG remains configurable via endpoint URL in config
+- OpenAI-compatible endpoint support — any `/v1/chat/completions` server works, not just Ollama-specific paths
 
 ## Requirements
 
@@ -55,7 +66,11 @@ Fast, local chat with optional web search for current information — powered by
 
 ### Active
 
-*(none — planning next milestone)*
+- [ ] goreleaser build pipeline + GitHub Actions release workflow + Homebrew tap (macOS + WSL/Linux)
+- [ ] `myhelper setup` interactive wizard (Ollama install check, model pull, Tavily key, SearXNG config)
+- [ ] Hardware-aware model recommendation (GPU/RAM detection → suggest model size)
+- [ ] Tavily as default search provider; SearXNG as configurable alternative
+- [ ] OpenAI-compatible endpoint support (any `/v1/chat/completions` server, not Ollama-specific)
 
 ### Out of Scope
 
@@ -74,20 +89,22 @@ Fast, local chat with optional web search for current information — powered by
 - **Inference server**: Ollama at `192.168.0.9:11434`, model `qwen2.5-coder:7b`
 - **Model constraint**: ~8k context window — token threshold at 4,100 triggers summarization before overflow
 - **Primary use case**: Solo developer productivity tool; local-only execution
+- **Target platforms**: macOS (dev machine, Apple Silicon) + WSL/Linux (Windows work laptop)
 - **Codebase state (v4.0)**: `cmd/`: chat, inspect, search, helpers, root; `internal/`: config, history, ollama, search — lean and live, no dead packages
 - **Tech stack**: Go, cobra, chzyer/readline, glamour (markdown rendering), go-tiktoken, SearXNG JSON API
+- **Search providers (v5.0 target)**: Tavily (API key, free 1k/month) as default; SearXNG (self-hosted) as configurable alternative
 - **Known tech debt (v4.0)**:
   - CLAUDE.md Architecture section describes deleted packages — documentation drift, does not affect build
-  - `Symbol.CallEdges`/`TypeRefs` were removed with the scanner package — no longer a concern
   - `llmReRank` always returns nil error by design — named `reRankErr` branches are technically dead code
 
 ## Constraints
 
 - **Language**: Go
 - **Model context**: 8k limit — strict budgeting required
-- **Inference**: Local Ollama only
+- **Inference**: Local Ollama (primary); any OpenAI-compatible endpoint supported
+- **Platform**: macOS (darwin/amd64, darwin/arm64) + WSL/Linux (linux/amd64, linux/arm64)
 - **Output**: Streaming to stdout
-- **Config**: Endpoint/model configurable via env or config file
+- **Config**: Endpoint/model/search-provider configurable via env or config file
 
 ## Key Decisions
 
@@ -122,4 +139,4 @@ This document evolves at milestone boundaries.
 4. Context + architecture update
 
 ---
-*Last updated: 2026-04-26 — v4.0 Search-First Simplification complete; dead retrieval pipeline deleted; inspect rewritten as web search diagnostic*
+*Last updated: 2026-05-09 — v5.0 Distribution & First-Run Setup milestone started*
