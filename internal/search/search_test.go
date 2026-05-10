@@ -223,6 +223,7 @@ func TestSearch_Errors(t *testing.T) {
 
 func TestLoadConfig(t *testing.T) {
 	t.Run("default_when_no_env_no_file", func(t *testing.T) {
+		t.Chdir(t.TempDir())
 		// Ensure env var is unset
 		t.Setenv("MYHELPER_SEARCH_ENDPOINT", "")
 		cfg := search.LoadConfig()
@@ -232,6 +233,7 @@ func TestLoadConfig(t *testing.T) {
 	})
 
 	t.Run("env_var_overrides_default", func(t *testing.T) {
+		t.Chdir(t.TempDir())
 		t.Setenv("MYHELPER_SEARCH_ENDPOINT", "http://custom:9999")
 		cfg := search.LoadConfig()
 		if cfg.Endpoint != "http://custom:9999" {
@@ -418,6 +420,7 @@ func TestSearch_ProviderDispatch(t *testing.T) {
 
 func TestLoadConfig_TavilyKeyEnvVar(t *testing.T) {
 	t.Run("env_var_sets_tavily_key", func(t *testing.T) {
+		t.Chdir(t.TempDir())
 		t.Setenv("MYHELPER_TAVILY_KEY", "tvly-testkey")
 		t.Setenv("MYHELPER_SEARCH_ENDPOINT", "") // isolate from any real config
 		cfg := search.LoadConfig()
@@ -427,6 +430,7 @@ func TestLoadConfig_TavilyKeyEnvVar(t *testing.T) {
 	})
 
 	t.Run("auto_selects_tavily_when_key_present", func(t *testing.T) {
+		t.Chdir(t.TempDir())
 		t.Setenv("MYHELPER_TAVILY_KEY", "tvly-testkey")
 		// Do not set MYHELPER_SEARCH_ENDPOINT so Provider remains empty (relying on auto-select)
 		cfg := search.LoadConfig()
@@ -437,6 +441,7 @@ func TestLoadConfig_TavilyKeyEnvVar(t *testing.T) {
 	})
 
 	t.Run("no_key_defaults_to_searxng", func(t *testing.T) {
+		t.Chdir(t.TempDir())
 		t.Setenv("MYHELPER_TAVILY_KEY", "")
 		cfg := search.LoadConfig()
 		if cfg.Provider != "searxng" {
