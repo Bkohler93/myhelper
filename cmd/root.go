@@ -38,7 +38,7 @@ var rootCmd = &cobra.Command{
 	Use:               "myhelper [question]",
 	Short:             "A focused chat assistant backed by a local Ollama model",
 	Long:              "myhelper sends messages to a local Ollama server and streams responses to stdout.\n\nRun with no arguments to start an interactive REPL, or pass a question to get a one-shot response.",
-	Version:           Version,
+	Version:           fmt.Sprintf("%s (commit %s, built %s)", Version, Commit, Date),
 	CompletionOptions: cobra.CompletionOptions{HiddenDefaultCmd: true},
 	Args:              cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {

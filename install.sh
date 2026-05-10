@@ -73,7 +73,8 @@ elif command -v shasum >/dev/null 2>&1; then
   # macOS ships shasum, not sha256sum
   grep "${ARCHIVE}" "${CHECKSUM}" | shasum -a 256 -c -
 else
-  echo "Warning: sha256sum and shasum not found — skipping checksum verification." >&2
+  echo "Error: sha256sum and shasum not found — cannot verify checksum. Aborting." >&2
+  exit 1
 fi
 cd - >/dev/null
 
@@ -90,5 +91,5 @@ if [[ ":$PATH:" != *":${INSTALL_DIR}:"* ]]; then
   echo ""
   echo "NOTE: ${INSTALL_DIR} is not in your PATH."
   echo "Add this to your ~/.bashrc or ~/.zshrc:"
-  echo "  export PATH=\"\$HOME/.local/bin:\$PATH\""
+  echo "  export PATH=\"${INSTALL_DIR}:\$PATH\""
 fi

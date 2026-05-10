@@ -13,17 +13,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
         with:
           fetch-depth: 0
 
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@d60b41a563a30bb0b0dc4a7a450de86e8d1dda3e  # v5.5.0
         with:
           go-version: stable
 
       - name: Run GoReleaser
-        uses: goreleaser/goreleaser-action@v7
+        uses: goreleaser/goreleaser-action@9c156ee5f32f69f1409b26aafcf9aadf7a40f37  # v7
         with:
           distribution: goreleaser
           version: "~> v2"
