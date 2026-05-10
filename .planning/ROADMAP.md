@@ -12,6 +12,7 @@
 - ✅ **v3.2 Observability & Polish** — Phases 21-23 (shipped 2026-04-24)
 - ✅ **v3.3 Rich Chat UX** — Phases 24-25 (shipped 2026-04-25)
 - ✅ **v4.0 Search-First Simplification** — Phases 26-27 (shipped 2026-04-26)
+- [ ] **v5.0 Distribution & First-Run Setup** — Phases 28-30
 
 ## Phases
 
@@ -121,6 +122,49 @@ Full archive: `.planning/milestones/v4.0-ROADMAP.md`
 
 </details>
 
+### v5.0 Distribution & First-Run Setup
+
+- [ ] **Phase 28: Distribution** - goreleaser build pipeline, GitHub Actions release workflow, and curl install script
+- [ ] **Phase 29: Tavily Search Provider** - Tavily API integration as the default search provider with env var and config support
+- [ ] **Phase 30: Setup Wizard** - `myhelper setup` interactive first-run wizard covering Ollama, hardware detection, model pull, and search config
+
+## Phase Details
+
+### Phase 28: Distribution
+**Goal**: myhelper binaries are downloadable and installable without a Go toolchain
+**Depends on**: Nothing (independent of feature work)
+**Requirements**: DIST-01, DIST-02
+**Success Criteria** (what must be TRUE):
+  1. A WSL/Linux user can install myhelper with a single curl command — no Go install required
+  2. Pushing a git tag triggers GitHub Actions to build darwin/amd64, darwin/arm64, linux/amd64, linux/arm64 binaries automatically
+  3. Built binaries appear as downloadable assets on the GitHub Releases page
+  4. The curl install script auto-detects OS and architecture and places the binary in PATH
+**Plans**: TBD
+
+### Phase 29: Tavily Search Provider
+**Goal**: Users can use Tavily as a search provider in addition to SearXNG
+**Depends on**: Nothing (independent — internal/search extension)
+**Requirements**: SRCH-01, SRCH-02, SRCH-03
+**Success Criteria** (what must be TRUE):
+  1. User with a Tavily API key in config gets Tavily search results instead of SearXNG by default
+  2. User can set `MYHELPER_TAVILY_KEY` env var to provide their Tavily key, overriding config
+  3. User can switch between Tavily and SearXNG by changing `search_provider` in config.json
+  4. User with no Tavily key and a SearXNG endpoint continues to get SearXNG results unchanged
+**Plans**: TBD
+
+### Phase 30: Setup Wizard
+**Goal**: A new user can go from zero to working chat in a single `myhelper setup` run
+**Depends on**: Phase 29 (Tavily provider must exist before wizard configures it)
+**Requirements**: SETUP-01, SETUP-02, SETUP-03, SETUP-04, SETUP-05, SETUP-06
+**Success Criteria** (what must be TRUE):
+  1. Running `myhelper setup` on a machine without Ollama shows platform-specific install instructions (brew on macOS, curl on Linux/WSL)
+  2. Running `myhelper setup` on a machine with Ollama shows a model recommendation based on detected GPU VRAM or RAM
+  3. User can confirm in-wizard to pull the recommended model without leaving the terminal
+  4. User is prompted for a Tavily API key and the key is written to `~/.config/myhelper/config.json`
+  5. User can optionally enter a SearXNG endpoint and it is written to config
+**Plans**: TBD
+**UI hint**: yes
+
 ## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
@@ -152,3 +196,6 @@ Full archive: `.planning/milestones/v4.0-ROADMAP.md`
 | 25. Markdown Rendering | v3.3 | 1/1 | Complete | 2026-04-25 |
 | 26. Dead Code Purge | v4.0 | 1/1 | Complete | 2026-04-26 |
 | 27. Inspect Rewrite | v4.0 | 1/1 | Complete | 2026-04-26 |
+| 28. Distribution | v5.0 | 0/? | Not started | - |
+| 29. Tavily Search Provider | v5.0 | 0/? | Not started | - |
+| 30. Setup Wizard | v5.0 | 0/? | Not started | - |

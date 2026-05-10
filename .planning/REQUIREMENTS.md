@@ -52,15 +52,15 @@
 |-------------|-------|--------|
 | DIST-01 | Phase 28 | Pending |
 | DIST-02 | Phase 28 | Pending |
-| SETUP-01 | Phase 29 | Pending |
-| SETUP-02 | Phase 29 | Pending |
-| SETUP-03 | Phase 29 | Pending |
-| SETUP-04 | Phase 29 | Pending |
-| SETUP-05 | Phase 29 | Pending |
-| SETUP-06 | Phase 29 | Pending |
-| SRCH-01 | Phase 30 | Pending |
-| SRCH-02 | Phase 30 | Pending |
-| SRCH-03 | Phase 30 | Pending |
+| SRCH-01 | Phase 29 | Pending |
+| SRCH-02 | Phase 29 | Pending |
+| SRCH-03 | Phase 29 | Pending |
+| SETUP-01 | Phase 30 | Pending |
+| SETUP-02 | Phase 30 | Pending |
+| SETUP-03 | Phase 30 | Pending |
+| SETUP-04 | Phase 30 | Pending |
+| SETUP-05 | Phase 30 | Pending |
+| SETUP-06 | Phase 30 | Pending |
 
 **Coverage:**
 - v5.0 requirements: 11 total
@@ -69,4 +69,4 @@
 
 ---
 *Requirements defined: 2026-05-09*
-*Last updated: 2026-05-09 after initial definition*
+*Last updated: 2026-05-09 — traceability updated after roadmap creation (SRCH→Phase 29, SETUP→Phase 30)*
