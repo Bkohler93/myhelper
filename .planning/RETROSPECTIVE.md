@@ -249,6 +249,45 @@
 
 ---
 
+## Milestone: v5.0 — Distribution & First-Run Setup
+
+**Shipped:** 2026-05-10
+**Phases:** 3 (28–30) | **Plans:** 6 | **Sessions:** 2
+
+### What Was Built
+- goreleaser v2 config + GitHub Actions release workflow: 4-platform binary releases on v* tag pushes
+- curl-pipe install.sh with uname OS/arch detection, SHA256 verification, PATH management
+- Tavily HTTP client with Bearer auth; provider dispatch in Search(); MYHELPER_TAVILY_KEY env var; SearXNG backward-compatible
+- `myhelper setup` interactive wizard: Ollama check → platform install instructions → hardware detection (nvidia-smi / system_profiler / /proc/meminfo chain) → 4-tier model recommendation → NDJSON pull streaming → config write with 0600 permissions
+
+### What Worked
+- io.Reader/io.Writer injection in wizard.Run() made unit tests hermetic with httptest — zero flaky tests, clean test structure
+- Ordering Phase 29 (Tavily) before Phase 30 (wizard) prevented a hidden dependency: wizard writes config keys that must match Phase 29's struct tags exactly — verified at integration check
+- All 4 human UAT items validated in one session — explicit test scripts in VERIFICATION.md made manual validation fast
+- Code review fix commits (WR-01 through WR-04) applied cleanly — the review→fix chain continues to be a reliable quality layer
+
+### What Was Inefficient
+- REQUIREMENTS.md traceability table not updated during development — all SETUP/SRCH requirements showed Pending at autonomous mode start; updated manually at milestone close
+- 30-02-SUMMARY.md was never created despite Plan 02 being fully executed — documentation artifact gap noticed only at audit time
+
+### Patterns Established
+- Wizard testability pattern: wire io.Reader/io.Writer through the call stack instead of reading os.Stdin directly — enables httptest injection for network calls and io.Reader for user input
+- Multi-GPU nvidia-smi fix: always parse only the first line of nvidia-smi output to handle multi-GPU machines
+- mergeHomeConfig: read existing config into map[string]interface{}, merge only specified keys, write back — non-destructive, zero risk of silent key deletion
+
+### Key Lessons
+1. Cross-phase config key alignment is a real integration risk — wizard writes keys that the search package reads; checking key name matches at integration review (not runtime) is the right gate
+2. Hermetic test injection (io.Reader/io.Writer, http client vars) is worth the upfront setup cost — makes wizard-style CLI code fully unit-testable without mocking the OS
+3. goreleaser v2 schema change (version: 2 header required) is a silent failure mode — always check schema version when upgrading goreleaser-action
+4. Verify install.sh extraction path against a real goreleaser snapshot before tagging — wrap_in_directory behavior is easy to get wrong and silent to fail
+
+### Cost Observations
+- Model mix: sonnet throughout (autonomous mode)
+- Sessions: 2 (Phases 28-29 in session 1; Phase 30 + lifecycle in session 2)
+- Notable: +6,205 lines across 53 files; first milestone to ship distribution infrastructure
+
+---
+
 ## Cross-Milestone Trends
 
 ### Process Evolution
@@ -262,6 +301,7 @@
 | v3.1 | 1 | 3 | SearXNG client + search gate + re-rank; chat+web-search primary identity established |
 | v3.2 | 1 | 3 | inspect command + spinners + debt cleanup; fastest milestone yet (single day, 5 plans) |
 | v4.0 | 1 | 2 | Dead retrieval pipeline deleted (−5,500 lines); inspect rewritten as web diagnostic |
+| v5.0 | 2 | 3 | Distribution infrastructure + Tavily provider + setup wizard; first milestone to ship binaries |
 
 ### Cumulative Quality
 
@@ -273,6 +313,7 @@
 | v1.3 | ~2,900 LOC tests | all packages | 13 retrieval unit tests; Phase 11 VERIFICATION.md gap; integration still manual |
 | v3.2 | ~2,900 LOC tests (unchanged) | all packages | no new tests; debt cleanup + wiring; pre-existing planner fixture failure unrelated |
 | v4.0 | ~1,400 LOC tests (deleted ~1,500 with dead packages) | cmd, config, history, ollama, search | all 5 packages pass; retrieval/scanner/context/planner tests deleted with packages |
+| v5.0 | ~1,400 + 216 wizard + 459 search (new) = ~2,075 LOC tests | all 6 packages | new wizard and search tests; hermetic httptest injection throughout |
 
 ### Top Lessons (Verified Across Milestones)
 
@@ -286,3 +327,5 @@
 8. A dedicated cleanup phase at milestone end is a strong pattern — explicit bug/removal requirements execute fast with low risk
 9. When architecture shifts, delete dead code aggressively — the longer you carry it, the higher the carry cost; v4.0's net −5,466 lines proves the payoff
 10. Stub-then-rewrite across phases works cleanly for command rewrites: keep cobra registration in phase N, replace body in phase N+1
+11. Cross-phase config key alignment is a real integration risk — when two packages write/read the same JSON keys, verify name matches at integration check (v5.0: wizard → search.Config)
+12. io.Reader/io.Writer injection makes wizard-style CLI code fully unit-testable — avoid os.Stdin in library packages

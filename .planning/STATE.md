@@ -1,13 +1,13 @@
 ---
 gsd_state_version: 1.0
-milestone: v5.0
-milestone_name: Distribution & First-Run Setup
-status: ready
+milestone: v5.1
+milestone_name: Configuration Validation & Setup Hardening
+status: planning
 stopped_at: ""
-last_updated: "2026-05-09T00:00:00Z"
-last_activity: 2026-05-09
+last_updated: "2026-05-10T00:00:00Z"
+last_activity: 2026-05-10
 progress:
-  total_phases: 3
+  total_phases: 0
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -18,31 +18,25 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-05-09)
+See: .planning/PROJECT.md (updated 2026-05-10)
 
 **Core value:** Fast, local AI chat with optional web search — inference runs locally via Ollama, search is pluggable (Tavily or self-hosted SearXNG), no cloud AI required.
-**Current focus:** v5.0 Distribution & First-Run Setup — Phase 28 ready to plan
+**Current focus:** v5.1 — Configuration Validation & Setup Hardening
 
 ## Current Position
 
-Phase: 28 — Distribution (not started)
+Phase: Not started (defining requirements)
 Plan: —
-Status: Roadmap defined, ready for `/gsd-plan-phase 28`
-Last activity: 2026-05-09 — Roadmap created for v5.0
+Status: Defining requirements
+Last activity: 2026-05-10 — Milestone v5.1 started
 
-Progress: `░░░░░░░░░░` 0% (0/3 phases complete)
+Progress: `░░░░░░░░░░` 0%
 
 ## Accumulated Context
 
 ### Decisions
 
-All v4.0 decisions are archived in `.planning/PROJECT.md` Key Decisions table.
-
-**v5.0 decisions recorded at roadmap time:**
-- SRCH (Phase 29) planned before SETUP (Phase 30) — wizard configures Tavily key, provider must exist to be wired at setup time
-- DIST (Phase 28) is fully independent — goreleaser/CI does not touch application logic
-- Homebrew tap deferred to future requirements (DIST-F01) — curl installer covers WSL primary use case
-- OpenAI-compatible endpoint deferred to future requirements (INFER-F01) — Ollama-only for v5.0
+All v5.0 decisions archived in `.planning/milestones/v5.0-ROADMAP.md` and `.planning/PROJECT.md` Key Decisions table.
 
 ### Blockers/Concerns
 
@@ -50,13 +44,12 @@ None.
 
 ## Deferred Items
 
-Items carried from v4.0:
-
 | Category | Item | Status |
 |----------|------|--------|
-| verification | Phase 22: 22-VERIFICATION.md [human_needed] — live spinner clear test on real TTY with Ollama+SearXNG | deferred |
+| verification | Phase 22: 22-VERIFICATION.md [human_needed] — live spinner clear test on real TTY with Ollama+SearXNG | carried from v3.2 |
+| distribution | install.sh extraction path — verify wrap_in_directory on first real goreleaser release | v5.0 tech debt |
 
 ## Session Continuity
 
-Last session: 2026-05-09
-Stopped at: v5.0 roadmap defined — 3 phases (28-30), 11/11 requirements mapped
+Last session: 2026-05-10
+Stopped at: v5.0 milestone complete — archived, tagged v5.0

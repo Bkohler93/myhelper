@@ -8,16 +8,14 @@ A Go CLI that provides fast, local-model-powered chat (`myhelper chat`) with opt
 
 Fast, local AI chat with optional web search — inference runs locally via Ollama, search is pluggable (Tavily or self-hosted SearXNG), no cloud AI required.
 
-## Current Milestone: v5.0 Distribution & First-Run Setup
+## Current Milestone: v5.1 Configuration Validation & Setup Hardening
 
-**Goal:** Package myhelper for reliable cross-platform installation (macOS + WSL/Linux) and make the first-run experience self-guiding from zero to working chat in a single command.
+**Goal:** Remove all hardcoded model/endpoint defaults and fail fast with clear errors when required config is missing — myhelper should never silently use a model the user didn't choose.
 
 **Target features:**
-- goreleaser + GitHub Actions release workflow → versioned pre-built binaries for darwin/amd64, darwin/arm64, linux/amd64, linux/arm64 + auto-generated Homebrew tap
-- `myhelper setup` interactive wizard — detects Ollama install, guides install if missing, detects GPU/RAM, recommends and pulls the right model, prompts for Tavily API key, writes config
-- Hardware-aware model recommendation — nvidia-smi (WSL/Linux), system_profiler (macOS), RAM fallback for CPU-only
-- Tavily as default search provider; SearXNG remains configurable via endpoint URL in config
-- OpenAI-compatible endpoint support — any `/v1/chat/completions` server works, not just Ollama-specific paths
+- Remove hardcoded defaults for model (`qwen2.5-coder:7b`) and endpoint (`192.168.0.9:11434`) from config loading
+- Config validation on startup: chat, inspect, and search hard-fail with clear error + "run myhelper setup" hint when model or endpoint is unset (env vars count as "set")
+- Setup wizard fix: always write a model — if user skips the recommended pull, prompt for an existing local model name before exiting
 
 ## Requirements
 
@@ -64,13 +62,23 @@ Fast, local AI chat with optional web search — inference runs locally via Olla
 - ✓ `--no-context` flag removed — no longer meaningful without retrieval pipeline — v4.0
 - ✓ `myhelper inspect <query>` — web search diagnostic dry-run: gate decision, fetched results, re-rank survivors/dropped, injected block preview with token cost — v4.0
 
+### Validated (v5.0)
+
+- ✓ goreleaser build pipeline + GitHub Actions release workflow (darwin/amd64, darwin/arm64, linux/amd64, linux/arm64) — v5.0
+- ✓ curl-pipe install script with SHA256 verification and ~/.local/bin install — v5.0
+- ✓ Tavily as default search provider with API key in config or MYHELPER_TAVILY_KEY env var — v5.0
+- ✓ `myhelper setup` interactive wizard: Ollama check, hardware detection, model pull, Tavily key, SearXNG endpoint — v5.0
+
 ### Active
 
-- [ ] goreleaser build pipeline + GitHub Actions release workflow + Homebrew tap (macOS + WSL/Linux)
-- [ ] `myhelper setup` interactive wizard (Ollama install check, model pull, Tavily key, SearXNG config)
-- [ ] Hardware-aware model recommendation (GPU/RAM detection → suggest model size)
-- [ ] Tavily as default search provider; SearXNG as configurable alternative
-- [ ] OpenAI-compatible endpoint support (any `/v1/chat/completions` server, not Ollama-specific)
+- [ ] Remove hardcoded model/endpoint defaults; require explicit config — v5.1
+- [ ] Config validation: hard-fail with clear error when model or endpoint unset — v5.1
+- [ ] Setup wizard: always write a model (prompt for existing if pull skipped) — v5.1
+
+### Deferred (post v5.1)
+
+- OpenAI-compatible endpoint support (any `/v1/chat/completions` server, not Ollama-specific)
+- Homebrew tap formula for `brew install brettkohler/tap/myhelper`
 
 ### Out of Scope
 
@@ -90,12 +98,14 @@ Fast, local AI chat with optional web search — inference runs locally via Olla
 - **Model constraint**: ~8k context window — token threshold at 4,100 triggers summarization before overflow
 - **Primary use case**: Solo developer productivity tool; local-only execution
 - **Target platforms**: macOS (dev machine, Apple Silicon) + WSL/Linux (Windows work laptop)
-- **Codebase state (v4.0)**: `cmd/`: chat, inspect, search, helpers, root; `internal/`: config, history, ollama, search — lean and live, no dead packages
-- **Tech stack**: Go, cobra, chzyer/readline, glamour (markdown rendering), go-tiktoken, SearXNG JSON API
-- **Search providers (v5.0 target)**: Tavily (API key, free 1k/month) as default; SearXNG (self-hosted) as configurable alternative
-- **Known tech debt (v4.0)**:
+- **Codebase state (v5.0)**: `cmd/`: chat, inspect, search, helpers, root, setup; `internal/`: config, history, ollama, search, wizard — lean and live
+- **Tech stack**: Go, cobra, chzyer/readline, glamour (markdown rendering), go-tiktoken, Tavily API, SearXNG JSON API
+- **Distribution**: goreleaser v2, GitHub Actions, curl-pipe install.sh — multi-platform binaries on GitHub Releases
+- **Search providers**: Tavily (API key, free 1k/month) as default when key present; SearXNG (self-hosted) as configurable alternative
+- **Known tech debt (v5.0)**:
   - CLAUDE.md Architecture section describes deleted packages — documentation drift, does not affect build
   - `llmReRank` always returns nil error by design — named `reRankErr` branches are technically dead code
+  - install.sh extraction path assumes binary at archive root — verify against real goreleaser archive on first tag push
 
 ## Constraints
 
@@ -127,6 +137,12 @@ Fast, local AI chat with optional web search — inference runs locally via Olla
 | Delete dead retrieval pipeline | v4.0: retrieval packages unused; chat is web-search-first | ✓ v4.0 — 5,500 lines removed, build cleaner |
 | inspect rewritten as web search diagnostic | Old inspect showed retrieval decisions (now moot); new inspect shows gate/fetch/re-rank/block | ✓ v4.0 — real LLM+SearXNG calls, diagnostic dry-run |
 | --search in inspect always runs re-rank | Diagnostic parity: inspect --search should show full pipeline same as gate=YES path | ✓ v4.0 — INSP-06 |
+| goreleaser v2 schema (version: 2) | v2 schema required for goreleaser-action@v7; version: 2 header mandatory | ✓ v5.0 — DIST-02 |
+| Wizard uses io.Reader/io.Writer injection | Enables hermetic unit tests with httptest; avoids os.Stdin hardcoding | ✓ v5.0 — SETUP |
+| mergeHomeConfig map-based merge | Preserves unrelated config keys (endpoint, model, token_threshold) when writing tavily_key or search_endpoint | ✓ v5.0 — SETUP-05/06 |
+| Tavily ordered before SearXNG in Phase 29 | Wizard must write tavily_key config field; provider must exist before wizard can configure it | ✓ v5.0 — ordering |
+| Homebrew tap deferred | curl installer covers WSL primary use case; tap adds CI complexity | — v5.0; DIST-F01 |
+| OpenAI-compatible endpoint deferred | Ollama-only for v5.0; OpenAI-compat is a future nice-to-have | — v5.0; INFER-F01 |
 
 ## Evolution
 
@@ -139,4 +155,4 @@ This document evolves at milestone boundaries.
 4. Context + architecture update
 
 ---
-*Last updated: 2026-05-09 — v5.0 Distribution & First-Run Setup milestone started*
+*Last updated: 2026-05-10 — v5.1 Configuration Validation & Setup Hardening milestone started*

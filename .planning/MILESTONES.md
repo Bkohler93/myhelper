@@ -1,5 +1,20 @@
 # Milestones
 
+## v5.0 Distribution & First-Run Setup (Shipped: 2026-05-10)
+
+**Phases completed:** 3 phases (28–30), 6 plans
+**Files changed:** 53 files, +6,205 / -637 lines
+**Timeline:** 2026-05-09 → 2026-05-10 (2 days)
+
+**Key accomplishments:**
+
+- goreleaser v2 config with 4 platform targets (darwin/amd64, darwin/arm64, linux/amd64, linux/arm64) + GitHub Actions release workflow triggered on `v*` tag pushes using goreleaser-action@v7 (Phase 28)
+- curl-pipe install script with uname OS/arch detection, SHA256 checksum verification, and `~/.local/bin` install with PATH hint (Phase 28)
+- Tavily HTTP client with POST + Bearer auth; provider-dispatching `Search()` function; `LoadConfig` auto-selects Tavily when key is present; `MYHELPER_TAVILY_KEY` and `MYHELPER_SEARCH_PROVIDER` env var support (Phase 29)
+- `myhelper setup` interactive wizard: `checkOllama` (HTTP probe), platform-specific install instructions, `detectMemoryMiB` (nvidia-smi / system_profiler / /proc/meminfo chain), 4-tier `recommendModel` table, `pullModel` NDJSON streaming, `mergeHomeConfig` with 0600 permissions — all human-validated (Phase 30)
+
+---
+
 ## v4.0 Search-First Simplification (Shipped: 2026-04-26)
 
 **Phases completed:** 2 phases (26–27), 2 plans, ~5 tasks
