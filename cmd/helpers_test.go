@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"io"
 	"os"
+	"strings"
 	"syscall"
 	"testing"
 	"time"
@@ -231,6 +232,48 @@ func TestJoinContinuationLines(t *testing.T) {
 		want := "a\nb\nc"
 		if got != want {
 			t.Errorf("got %q, want %q", got, want)
+		}
+	})
+}
+
+func TestValidateConfig(t *testing.T) {
+	t.Run("returns nil when both endpoint and model are set", func(t *testing.T) {
+		cfg := config.Config{Endpoint: "localhost:11434", Model: "qwen2.5-coder:7b"}
+		if err := validateConfig(cfg); err != nil {
+			t.Errorf("expected nil, got %v (VAL-05)", err)
+		}
+	})
+
+	t.Run("returns error when model is empty", func(t *testing.T) {
+		cfg := config.Config{Endpoint: "localhost:11434", Model: ""}
+		err := validateConfig(cfg)
+		if err == nil {
+			t.Fatal("expected error for empty model, got nil (VAL-01)")
+		}
+		if !strings.Contains(err.Error(), "myhelper setup") {
+			t.Errorf("error missing 'myhelper setup' hint: %v (VAL-01)", err)
+		}
+	})
+
+	t.Run("returns error when endpoint is empty", func(t *testing.T) {
+		cfg := config.Config{Endpoint: "", Model: "qwen2.5-coder:7b"}
+		err := validateConfig(cfg)
+		if err == nil {
+			t.Fatal("expected error for empty endpoint, got nil (VAL-02)")
+		}
+		if !strings.Contains(err.Error(), "myhelper setup") {
+			t.Errorf("error missing 'myhelper setup' hint: %v (VAL-02)", err)
+		}
+	})
+
+	t.Run("returns combined error when both endpoint and model are empty", func(t *testing.T) {
+		cfg := config.Config{}
+		err := validateConfig(cfg)
+		if err == nil {
+			t.Fatal("expected error for empty endpoint and model, got nil (VAL-01, VAL-02)")
+		}
+		if !strings.Contains(err.Error(), "myhelper setup") {
+			t.Errorf("error missing 'myhelper setup' hint: %v", err)
 		}
 	})
 }
