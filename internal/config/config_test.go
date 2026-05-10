@@ -124,6 +124,7 @@ func TestLoad(t *testing.T) {
 		t.Setenv("MYHELPER_MODEL", "")
 		t.Setenv("MYHELPER_ENDPOINT", "")
 		t.Setenv("MYHELPER_TOKEN_LIMIT", "")
+		t.Setenv("HOME", t.TempDir()) // isolate from real ~/.config/myhelper/config.json
 
 		dir := t.TempDir()
 		orig, err := os.Getwd()
