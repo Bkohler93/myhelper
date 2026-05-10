@@ -155,7 +155,9 @@ func detectMemoryMiB() int64 {
 		// Try nvidia-smi for GPU VRAM first.
 		out, err := exec.Command("nvidia-smi", "--query-gpu=memory.total", "--format=csv,noheader,nounits").Output()
 		if err == nil && len(strings.TrimSpace(string(out))) > 0 {
-			if n, err := strconv.ParseInt(strings.TrimSpace(string(out)), 10, 64); err == nil {
+			// WR-02: multi-GPU systems emit one line per GPU; use the first line only.
+			lines := strings.Split(strings.TrimSpace(string(out)), "\n")
+			if n, err := strconv.ParseInt(strings.TrimSpace(lines[0]), 10, 64); err == nil {
 				return n
 			}
 		}
