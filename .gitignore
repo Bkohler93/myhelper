@@ -3,3 +3,4 @@ myhelper
 .myhelper/
 tmp/
 .claude/
+dist/
