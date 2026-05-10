@@ -1,6 +1,7 @@
 package search
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -12,13 +13,17 @@ import (
 )
 
 const DefaultSearchEndpoint = "http://192.168.0.9:8083"
+const DefaultTavilyEndpoint = "https://api.tavily.com/search"
 
-// Config holds the resolved SearXNG endpoint.
+// Config holds the resolved search configuration.
 type Config struct {
-	Endpoint string `json:"search_endpoint"`
+	Endpoint       string `json:"search_endpoint"`
+	Provider       string `json:"search_provider"` // "tavily" | "searxng"
+	TavilyKey      string `json:"tavily_key"`
+	TavilyEndpoint string `json:"tavily_endpoint"` // overridable for tests; defaults to DefaultTavilyEndpoint
 }
 
-// Result represents a single search result returned by SearXNG.
+// Result represents a single search result.
 type Result struct {
 	Title   string
 	URL     string
@@ -36,11 +41,27 @@ type searxResult struct {
 	Content string `json:"content"`
 }
 
-// LoadConfig resolves the SearXNG endpoint with the following precedence (highest to lowest):
-//  1. MYHELPER_SEARCH_ENDPOINT environment variable
-//  2. local .myhelper/config.json (search_endpoint key)
-//  3. ~/.config/myhelper/config.json (search_endpoint key)
-//  4. DefaultSearchEndpoint
+// Internal Tavily JSON response types.
+type tavilyResponse struct {
+	Results []tavilyResult `json:"results"`
+}
+
+type tavilyResult struct {
+	Title   string  `json:"title"`
+	URL     string  `json:"url"`
+	Content string  `json:"content"`
+	Score   float64 `json:"score"`
+}
+
+// LoadConfig resolves the search configuration with the following precedence (highest to lowest):
+//  1. MYHELPER_SEARCH_ENDPOINT and MYHELPER_TAVILY_KEY environment variables
+//  2. local .myhelper/config.json
+//  3. ~/.config/myhelper/config.json
+//  4. DefaultSearchEndpoint / no Tavily key
+//
+// Provider auto-selection: if search_provider is not explicitly set in config,
+// Provider is set to "tavily" when TavilyKey is non-empty, otherwise "searxng".
+// An explicit search_provider in config always overrides auto-selection.
 func LoadConfig() Config {
 	cfg := Config{Endpoint: DefaultSearchEndpoint}
 
@@ -48,16 +69,48 @@ func LoadConfig() Config {
 		if loaded.Endpoint != "" {
 			cfg.Endpoint = loaded.Endpoint
 		}
+		if loaded.Provider != "" {
+			cfg.Provider = loaded.Provider
+		}
+		if loaded.TavilyKey != "" {
+			cfg.TavilyKey = loaded.TavilyKey
+		}
+		if loaded.TavilyEndpoint != "" {
+			cfg.TavilyEndpoint = loaded.TavilyEndpoint
+		}
 	}
 	if loaded, ok := loadConfigFile(localConfigPath()); ok {
 		if loaded.Endpoint != "" {
 			cfg.Endpoint = loaded.Endpoint
+		}
+		if loaded.Provider != "" {
+			cfg.Provider = loaded.Provider
+		}
+		if loaded.TavilyKey != "" {
+			cfg.TavilyKey = loaded.TavilyKey
+		}
+		if loaded.TavilyEndpoint != "" {
+			cfg.TavilyEndpoint = loaded.TavilyEndpoint
 		}
 	}
 
 	if v := os.Getenv("MYHELPER_SEARCH_ENDPOINT"); v != "" {
 		cfg.Endpoint = v
 	}
+	if v := os.Getenv("MYHELPER_TAVILY_KEY"); v != "" {
+		cfg.TavilyKey = v
+	}
+
+	// Auto-select provider only when not explicitly set in config.
+	// This block runs after env vars so that a key supplied via env still triggers auto-selection.
+	if cfg.Provider == "" {
+		if cfg.TavilyKey != "" {
+			cfg.Provider = "tavily"
+		} else {
+			cfg.Provider = "searxng"
+		}
+	}
+
 	return cfg
 }
 
@@ -86,10 +139,10 @@ func loadConfigFile(path string) (Config, bool) {
 	return c, true
 }
 
-// Search queries the SearXNG instance at cfg.Endpoint and returns parsed results.
+// searxngSearch queries the SearXNG instance at cfg.Endpoint and returns parsed results.
 // Results with an empty Title or URL are dropped from the returned slice.
 // Returns nil, err on network failure or non-200 response.
-func Search(query string, cfg Config) ([]Result, error) {
+func searxngSearch(query string, cfg Config) ([]Result, error) {
 	endpoint := cfg.Endpoint
 	if !strings.HasPrefix(endpoint, "http://") && !strings.HasPrefix(endpoint, "https://") {
 		endpoint = "http://" + endpoint
@@ -125,4 +178,66 @@ func Search(query string, cfg Config) ([]Result, error) {
 		})
 	}
 	return out, nil
+}
+
+// tavilySearch queries the Tavily API and returns parsed results.
+// Uses POST with Bearer token authentication.
+// TavilyKey is the Bearer token; never interpolated into URL or body — kept in header only.
+// Results with an empty Title or URL are dropped from the returned slice.
+// Returns nil, err on network failure or non-200 response.
+func tavilySearch(query string, cfg Config) ([]Result, error) {
+	endpoint := cfg.TavilyEndpoint
+	if endpoint == "" {
+		endpoint = DefaultTavilyEndpoint
+	}
+
+	body, err := json.Marshal(map[string]any{
+		"query":       query,
+		"max_results": 10,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("marshal tavily request: %w", err)
+	}
+
+	req, err := http.NewRequest(http.MethodPost, endpoint, bytes.NewReader(body))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	// TavilyKey is the Bearer token; never interpolated into URL or body — kept in header only.
+	req.Header.Set("Authorization", "Bearer "+cfg.TavilyKey)
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("POST tavily: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		b, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("tavily returned %d: %s", resp.StatusCode, strings.TrimSpace(string(b)))
+	}
+
+	var tr tavilyResponse
+	if err := json.NewDecoder(resp.Body).Decode(&tr); err != nil {
+		return nil, fmt.Errorf("decode tavily response: %w", err)
+	}
+
+	out := make([]Result, 0, len(tr.Results))
+	for _, r := range tr.Results {
+		if r.Title == "" || r.URL == "" {
+			continue
+		}
+		out = append(out, Result{Title: r.Title, URL: r.URL, Snippet: r.Content})
+	}
+	return out, nil
+}
+
+// Search routes the query to the configured provider.
+// When cfg.Provider is "tavily", Tavily is used. All other values route to SearXNG.
+func Search(query string, cfg Config) ([]Result, error) {
+	if cfg.Provider == "tavily" {
+		return tavilySearch(query, cfg)
+	}
+	return searxngSearch(query, cfg)
 }
