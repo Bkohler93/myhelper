@@ -186,6 +186,10 @@ func searxngSearch(query string, cfg Config) ([]Result, error) {
 // Results with an empty Title or URL are dropped from the returned slice.
 // Returns nil, err on network failure or non-200 response.
 func tavilySearch(query string, cfg Config) ([]Result, error) {
+	if cfg.TavilyKey == "" {
+		return nil, fmt.Errorf("tavily provider selected but TavilyKey is not configured")
+	}
+
 	endpoint := cfg.TavilyEndpoint
 	if endpoint == "" {
 		endpoint = DefaultTavilyEndpoint
