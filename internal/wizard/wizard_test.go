@@ -173,7 +173,10 @@ func TestRun_NoOllama(t *testing.T) {
 	ollamaBaseURL = "http://127.0.0.1:19999"
 	t.Cleanup(func() { ollamaBaseURL = "http://localhost:11434" })
 
-	input := strings.NewReader("")
+	// Stage 1 is now the endpoint prompt; supply empty line to accept the default
+	// (which is already set to the unreachable port above). The wizard then runs
+	// the reachability check against that endpoint and exits with install instructions.
+	input := strings.NewReader("\n")
 	var out bytes.Buffer
 	if err := Run(input, &out); err != nil {
 		t.Fatalf("Run: %v", err)

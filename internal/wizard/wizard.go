@@ -50,11 +50,12 @@ type pullProgress struct {
 // Pass os.Stdin / os.Stdout in production; use *strings.Reader / *bytes.Buffer in tests.
 //
 // Wizard stages:
-//  1. Check Ollama reachability; print install instructions and return if not running.
-//  2. Detect hardware memory (VRAM or RAM) and recommend a model.
-//  3. Prompt user to pull the recommended model.
-//  4. Prompt for Tavily API key (optional).
-//  5. Prompt for SearXNG endpoint (optional).
+//  1. Prompt for Ollama endpoint (so the reachability check uses the correct URL).
+//  2. Check Ollama reachability at the confirmed endpoint; print install instructions and return if not running.
+//  3. Detect hardware memory (VRAM or RAM) and recommend a model.
+//  4. Prompt user to pull the recommended model.
+//  5. Prompt for Tavily API key (optional).
+//  6. Prompt for SearXNG endpoint (optional).
 func Run(r io.Reader, w io.Writer) error {
 	// Single bufio.Reader threaded through all steps — never create a second one over r.
 	br := bufio.NewReader(r)
@@ -62,14 +63,8 @@ func Run(r io.Reader, w io.Writer) error {
 	// Declare line at function scope — used across all prompt stages.
 	var line string
 
-	// Stage 1: Ollama reachability check.
-	if !checkOllama() {
-		fmt.Fprintf(w, "Ollama is not running.\n\nInstall Ollama:\n  %s\n\nAfter installing, start Ollama and run `myhelper setup` again.\n", installInstructions())
-		return nil
-	}
-	fmt.Fprintf(w, "Ollama is running.\n\n")
-
-	// Stage 1.5: Ollama endpoint prompt — required field, loop until valid.
+	// Stage 1: Ollama endpoint prompt — required field, loop until valid.
+	// Must run BEFORE the reachability check so checkOllama() uses the user's endpoint.
 	var endpointValue string
 	for {
 		fmt.Fprintf(w, "Ollama endpoint [%s]: ", ollamaBaseURL)
@@ -85,10 +80,19 @@ func Run(r io.Reader, w io.Writer) error {
 		endpointValue = line
 		break
 	}
+	// Update the package-level URL so checkOllama() targets the user's endpoint.
+	ollamaBaseURL = endpointValue
 	if err := mergeHomeConfig(map[string]interface{}{"endpoint": endpointValue}); err != nil {
 		fmt.Fprintf(w, "Warning: could not save endpoint: %v\n", err)
 	}
 	fmt.Fprintln(w)
+
+	// Stage 2: Ollama reachability check against the confirmed endpoint.
+	if !checkOllama() {
+		fmt.Fprintf(w, "Ollama is not running at %s.\n\nInstall Ollama:\n  %s\n\nAfter installing, start Ollama and run `myhelper setup` again.\n", endpointValue, installInstructions())
+		return nil
+	}
+	fmt.Fprintf(w, "Ollama is running.\n\n")
 
 	// Stage 2: Hardware detection + model recommendation.
 	memMiB := detectMemoryMiB()
