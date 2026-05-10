@@ -29,7 +29,7 @@ go test -v ./cmd/...
 Config resolution order (highest to lowest priority):
 1. Env vars: `MYHELPER_ENDPOINT`, `MYHELPER_MODEL`, `MYHELPER_TOKEN_LIMIT`
 2. `.myhelper/config.json` in CWD, then `~/.config/myhelper/config.json`
-3. Hardcoded defaults: endpoint `192.168.0.9:11434`, model `qwen2.5-coder:7b`, threshold `4100`
+3. Hardcoded defaults: threshold `4100` only (endpoint and model have no default — run `myhelper setup`)
 
 ## Architecture
 
