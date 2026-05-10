@@ -27,6 +27,18 @@ type Config struct {
 	TavilyEndpoint string `json:"tavily_endpoint"` // overridable for tests; defaults to DefaultTavilyEndpoint
 }
 
+// MarshalJSON redacts TavilyKey to prevent accidental key exposure in logs or output.
+func (c Config) MarshalJSON() ([]byte, error) {
+	type Alias Config
+	return json.Marshal(&struct {
+		Alias
+		TavilyKey string `json:"tavily_key"`
+	}{
+		Alias:     Alias(c),
+		TavilyKey: "[REDACTED]",
+	})
+}
+
 // Result represents a single search result.
 type Result struct {
 	Title   string
