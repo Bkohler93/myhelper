@@ -15,6 +15,13 @@ import (
 	"strings"
 )
 
+// Package-level vars for test injection (set in tests only; never modify in production code).
+var ollamaBaseURL = "http://localhost:11434"
+
+// configPathOverride, if non-empty, is returned by homeConfigPath() instead of the real path.
+// Set this in tests to redirect config writes to a t.TempDir() path.
+var configPathOverride = ""
+
 // pullRequest is the JSON body sent to the Ollama /api/pull endpoint.
 type pullRequest struct {
 	Name   string `json:"name"`
@@ -106,10 +113,11 @@ func Run(r io.Reader, w io.Writer) error {
 	return nil
 }
 
-// checkOllama reports whether the Ollama service is reachable on localhost:11434.
+// checkOllama reports whether the Ollama service is reachable.
+// Uses ollamaBaseURL (overridable in tests); defaults to http://localhost:11434.
 // Returns true on HTTP 200; returns false on any error or non-200 status.
 func checkOllama() bool {
-	resp, err := http.Get("http://localhost:11434/")
+	resp, err := http.Get(ollamaBaseURL + "/")
 	if err != nil {
 		return false
 	}
@@ -211,7 +219,7 @@ func recommendModel(memMiB int64) (name string, requiredMiB int64) {
 // It uses a bufio.Scanner over resp.Body (a separate io.Reader from the wizard's stdin).
 func pullModel(name string, w io.Writer) error {
 	body, _ := json.Marshal(pullRequest{Name: name, Stream: true})
-	resp, err := http.Post("http://localhost:11434/api/pull", "application/json", bytes.NewReader(body))
+	resp, err := http.Post(ollamaBaseURL+"/api/pull", "application/json", bytes.NewReader(body))
 	if err != nil {
 		return fmt.Errorf("pull request: %w", err)
 	}
@@ -265,8 +273,12 @@ func mergeHomeConfig(updates map[string]interface{}) error {
 }
 
 // homeConfigPath returns the canonical path to the global myhelper config file.
+// If configPathOverride is non-empty, returns that path instead (used in tests).
 // Mirrors the same function in internal/config/config.go and internal/search/search.go.
 func homeConfigPath() string {
+	if configPathOverride != "" {
+		return configPathOverride
+	}
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return ""
