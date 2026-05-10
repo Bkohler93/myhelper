@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -73,8 +74,9 @@ func Run(r io.Reader, w io.Writer) error {
 		if line == "" {
 			line = ollamaBaseURL // accept the pre-filled default
 		}
-		if !strings.HasPrefix(line, "http://") && !strings.HasPrefix(line, "https://") {
-			fmt.Fprintf(w, "Endpoint must begin with http:// or https://. Try again.\n")
+		u, parseErr := url.Parse(line)
+		if parseErr != nil || u.Host == "" || (u.Scheme != "http" && u.Scheme != "https") {
+			fmt.Fprintf(w, "Endpoint must be a valid http:// or https:// URL with a host. Try again.\n")
 			continue
 		}
 		endpointValue = line
@@ -156,9 +158,10 @@ func Run(r io.Reader, w io.Writer) error {
 	line, _ = br.ReadString('\n')
 	line = strings.TrimSpace(line)
 	if line != "" {
-		// T-30-03: validate that endpoint has http:// or https:// prefix — reject bare hostnames.
-		if !strings.HasPrefix(line, "http://") && !strings.HasPrefix(line, "https://") {
-			fmt.Fprintf(w, "Warning: SearXNG endpoint must begin with http:// or https://; skipping.\n")
+		// T-30-03: validate that endpoint is a well-formed http/https URL with a non-empty host.
+		su, parseErr := url.Parse(line)
+		if parseErr != nil || su.Host == "" || (su.Scheme != "http" && su.Scheme != "https") {
+			fmt.Fprintf(w, "Warning: SearXNG endpoint must be a valid http:// or https:// URL with a host; skipping.\n")
 		} else {
 			if err := mergeHomeConfig(map[string]interface{}{"search_endpoint": line}); err != nil {
 				fmt.Fprintf(w, "Warning: could not save SearXNG endpoint: %v\n", err)
