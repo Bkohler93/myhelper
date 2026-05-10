@@ -138,7 +138,7 @@ func TestPullModel(t *testing.T) {
 	t.Cleanup(func() { ollamaBaseURL = "http://localhost:11434" })
 
 	var out bytes.Buffer
-	if err := pullModel("llama3.2:1b", &out); err != nil {
+	if err := pullModel("llama3.2:1b", srv.URL, &out); err != nil {
 		t.Errorf("pullModel: %v", err)
 	}
 	if !strings.Contains(out.String(), "pulling") {
@@ -157,7 +157,7 @@ func TestPullModel_Error(t *testing.T) {
 	t.Cleanup(func() { ollamaBaseURL = "http://localhost:11434" })
 
 	var out bytes.Buffer
-	err := pullModel("nonexistent:model", &out)
+	err := pullModel("nonexistent:model", srv.URL, &out)
 	if err == nil {
 		t.Error("expected error from pullModel on error NDJSON line, got nil")
 	}

@@ -106,7 +106,7 @@ func Run(r io.Reader, w io.Writer) error {
 	pullSucceeded := false
 	if line == "" || strings.ToLower(line) == "y" {
 		fmt.Fprintf(w, "Pulling %s...\n", model)
-		if err := pullModel(model, w); err != nil {
+		if err := pullModel(model, endpointValue, w); err != nil {
 			fmt.Fprintf(w, "Pull failed: %v\n", err)
 			// fall through to skip-model fallback below
 		} else {
@@ -280,10 +280,11 @@ func recommendModel(memMiB int64) (name string, requiredMiB int64) {
 
 // pullModel posts to the Ollama /api/pull endpoint and streams progress to w.
 // It uses a bufio.Scanner over resp.Body (a separate io.Reader from the wizard's stdin).
-func pullModel(name string, w io.Writer) error {
+// endpoint is the base URL of the Ollama server (e.g. "http://localhost:11434").
+func pullModel(name string, endpoint string, w io.Writer) error {
 	body, _ := json.Marshal(pullRequest{Name: name, Stream: true})
 	// WR-01: use pullHTTPClient (5m timeout) instead of the default no-timeout http.Post.
-	resp, err := pullHTTPClient.Post(ollamaBaseURL+"/api/pull", "application/json", bytes.NewReader(body))
+	resp, err := pullHTTPClient.Post(endpoint+"/api/pull", "application/json", bytes.NewReader(body))
 	if err != nil {
 		return fmt.Errorf("pull request: %w", err)
 	}
