@@ -28,6 +28,7 @@ func TestCheckOllama(t *testing.T) {
 
 	// Failing case: point at an unused port (connection refused).
 	ollamaBaseURL = "http://127.0.0.1:19999"
+	t.Cleanup(func() { ollamaBaseURL = "http://localhost:11434" })
 	if checkOllama() {
 		t.Error("expected checkOllama() false on connection refused")
 	}
