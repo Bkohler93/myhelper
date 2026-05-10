@@ -274,6 +274,23 @@ func readInteractive(prompt string) (string, error) {
 	return input, nil
 }
 
+// validateConfig checks that the required Endpoint and Model fields are set.
+// Returns a descriptive error with a "myhelper setup" remediation hint when
+// either field is empty. Called after config.Load() + ApplyFlagOverrides()
+// and before any Ollama calls.
+func validateConfig(cfg config.Config) error {
+	if cfg.Endpoint == "" && cfg.Model == "" {
+		return fmt.Errorf("endpoint and model are not configured\nRun 'myhelper setup' to configure myhelper")
+	}
+	if cfg.Endpoint == "" {
+		return fmt.Errorf("endpoint is not configured\nRun 'myhelper setup' to configure myhelper")
+	}
+	if cfg.Model == "" {
+		return fmt.Errorf("model is not configured\nRun 'myhelper setup' to configure myhelper")
+	}
+	return nil
+}
+
 // summarize compresses history when the token threshold is exceeded.
 // It operates on no-system-prompt history: msgs[0] is always a user message.
 //
