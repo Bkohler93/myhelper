@@ -139,7 +139,7 @@ Full archive: `.planning/milestones/v5.0-ROADMAP.md`
 **Milestone Goal:** Remove all hardcoded model/endpoint defaults and fail fast with clear errors when required config is missing — myhelper should never silently use a model the user didn't choose.
 
 - [x] **Phase 31: Config Loading & Startup Validation** (2/2 plans) — completed 2026-05-10
-- [ ] **Phase 32: Setup Wizard Hardening** - Ensure wizard always exits with a valid model and non-empty endpoint in config
+- [x] **Phase 32: Setup Wizard Hardening** (1/1 plans) — completed 2026-05-10
 
 ## Phase Details
 
@@ -167,7 +167,7 @@ Plans:
   3. The wizard refuses to write config if the Ollama endpoint field is empty, prompting the user to correct it
 **Plans**: 1 plan
 Plans:
-- [ ] 32-01-PLAN.md — Add endpoint prompt (Stage 1.5) and skip-model fallback to wizard
+- [x] 32-01-PLAN.md — Add endpoint prompt (Stage 1.5) and skip-model fallback to wizard
 
 ## Progress
 
@@ -204,4 +204,4 @@ Plans:
 | 29. Tavily Search Provider | v5.0 | 1/1 | Complete | 2026-05-10 |
 | 30. Setup Wizard | v5.0 | 2/2 | Complete | 2026-05-10 |
 | 31. Config Loading & Startup Validation | v5.1 | 2/2 | Complete | 2026-05-10 |
-| 32. Setup Wizard Hardening | v5.1 | 0/? | Not started | - |
+| 32. Setup Wizard Hardening | v5.1 | 1/1 | Complete | 2026-05-10 |
