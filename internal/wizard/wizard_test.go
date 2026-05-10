@@ -204,13 +204,204 @@ func TestRun_SkipAll(t *testing.T) {
 	configPathOverride = filepath.Join(dir, "config.json")
 	t.Cleanup(func() { configPathOverride = "" })
 
-	// stdin: "n" to skip pull, "" to skip Tavily, "" to skip SearXNG.
-	input := strings.NewReader("n\n\n\n")
+	// Stage 1.5: "" accepts default endpoint; "n" skips pull; "mymodel" satisfies fallback;
+	// "" skips Tavily; "" skips SearXNG.
+	input := strings.NewReader("\nn\nmymodel\n\n\n")
 	var out bytes.Buffer
 	if err := Run(input, &out); err != nil {
 		t.Fatalf("Run: %v", err)
 	}
 	if !strings.Contains(out.String(), "Setup complete") {
 		t.Errorf("expected 'Setup complete' in output, got: %q", out.String())
+	}
+}
+
+func TestRun_EndpointPrompt_AcceptDefault(t *testing.T) {
+	// Fake server returns 200 for all requests.
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer srv.Close()
+	ollamaBaseURL = srv.URL
+	t.Cleanup(func() { ollamaBaseURL = "http://localhost:11434" })
+
+	dir := t.TempDir()
+	configPathOverride = filepath.Join(dir, "config.json")
+	t.Cleanup(func() { configPathOverride = "" })
+
+	// Stage 1.5: empty = accept default; Stage 3: "n"; fallback: "llama3.2:1b"; Tavily: ""; SearXNG: ""
+	input := strings.NewReader("\nn\nllama3.2:1b\n\n\n")
+	var out bytes.Buffer
+	if err := Run(input, &out); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	data, _ := os.ReadFile(configPathOverride)
+	if !strings.Contains(string(data), `"endpoint"`) {
+		t.Errorf("expected endpoint in config, got: %s", data)
+	}
+	if !strings.Contains(string(data), srv.URL) {
+		t.Errorf("expected endpoint value %q in config, got: %s", srv.URL, data)
+	}
+}
+
+func TestRun_EndpointPrompt_CustomValue(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer srv.Close()
+	ollamaBaseURL = srv.URL
+	t.Cleanup(func() { ollamaBaseURL = "http://localhost:11434" })
+
+	dir := t.TempDir()
+	configPathOverride = filepath.Join(dir, "config.json")
+	t.Cleanup(func() { configPathOverride = "" })
+
+	// Stage 1.5: provide custom endpoint; Stage 3: "n"; fallback model; skip rest
+	input := strings.NewReader("http://192.168.0.9:11434\nn\nllama3.2:1b\n\n\n")
+	var out bytes.Buffer
+	if err := Run(input, &out); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	data, _ := os.ReadFile(configPathOverride)
+	if !strings.Contains(string(data), "192.168.0.9:11434") {
+		t.Errorf("expected custom endpoint in config, got: %s", data)
+	}
+}
+
+func TestRun_EndpointPrompt_InvalidThenValid(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer srv.Close()
+	ollamaBaseURL = srv.URL
+	t.Cleanup(func() { ollamaBaseURL = "http://localhost:11434" })
+
+	dir := t.TempDir()
+	configPathOverride = filepath.Join(dir, "config.json")
+	t.Cleanup(func() { configPathOverride = "" })
+
+	// Stage 1.5 attempt 1: invalid; attempt 2: valid; then skip model pull with name; skip rest
+	input := strings.NewReader("not-a-url\nhttp://192.168.0.9:11434\nn\nllama3.2:1b\n\n\n")
+	var out bytes.Buffer
+	if err := Run(input, &out); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	data, _ := os.ReadFile(configPathOverride)
+	if !strings.Contains(string(data), "192.168.0.9") {
+		t.Errorf("expected valid endpoint written after retry, got: %s", data)
+	}
+	if strings.Contains(string(data), "not-a-url") {
+		t.Errorf("invalid endpoint should not be written to config, got: %s", data)
+	}
+	// Output should contain the re-prompt hint about http://
+	if !strings.Contains(out.String(), "http://") {
+		t.Errorf("expected re-prompt hint in output, got: %q", out.String())
+	}
+}
+
+func TestRun_SkipModel_FallbackWritesModel(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer srv.Close()
+	ollamaBaseURL = srv.URL
+	t.Cleanup(func() { ollamaBaseURL = "http://localhost:11434" })
+
+	dir := t.TempDir()
+	configPathOverride = filepath.Join(dir, "config.json")
+	t.Cleanup(func() { configPathOverride = "" })
+
+	// Accept default endpoint, skip pull, provide model name, skip optional fields
+	input := strings.NewReader("\nn\nllama3.2:1b\n\n\n")
+	var out bytes.Buffer
+	if err := Run(input, &out); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	data, _ := os.ReadFile(configPathOverride)
+	if !strings.Contains(string(data), `"model"`) {
+		t.Errorf("expected model in config, got: %s", data)
+	}
+	if !strings.Contains(string(data), "llama3.2:1b") {
+		t.Errorf("expected llama3.2:1b as model value, got: %s", data)
+	}
+}
+
+func TestRun_SkipModel_EmptyThenProvided(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer srv.Close()
+	ollamaBaseURL = srv.URL
+	t.Cleanup(func() { ollamaBaseURL = "http://localhost:11434" })
+
+	dir := t.TempDir()
+	configPathOverride = filepath.Join(dir, "config.json")
+	t.Cleanup(func() { configPathOverride = "" })
+
+	// Accept endpoint default, skip pull, first fallback empty, second fallback valid
+	input := strings.NewReader("\nn\n\ngemma3:4b\n\n\n")
+	var out bytes.Buffer
+	if err := Run(input, &out); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	data, _ := os.ReadFile(configPathOverride)
+	if !strings.Contains(string(data), "gemma3:4b") {
+		t.Errorf("expected gemma3:4b in config after retry, got: %s", data)
+	}
+}
+
+func TestRun_SkipModel_EmptyTwice(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer srv.Close()
+	ollamaBaseURL = srv.URL
+	t.Cleanup(func() { ollamaBaseURL = "http://localhost:11434" })
+
+	dir := t.TempDir()
+	configPathOverride = filepath.Join(dir, "config.json")
+	t.Cleanup(func() { configPathOverride = "" })
+
+	// Accept endpoint default, skip pull, both fallback answers empty
+	input := strings.NewReader("\nn\n\n\n")
+	var out bytes.Buffer
+	err := Run(input, &out)
+	if err == nil {
+		t.Error("expected error when model name entered twice as empty, got nil")
+	}
+	// Config must not contain a model key
+	data, readErr := os.ReadFile(configPathOverride)
+	if readErr == nil && strings.Contains(string(data), `"model"`) {
+		t.Errorf("model key must not be written when no name provided, got: %s", data)
+	}
+}
+
+func TestRun_PullFail_FallbackWritesModel(t *testing.T) {
+	// Server: 200 on /, 500 on /api/pull.
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/api/pull" {
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprint(w, "internal error")
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer srv.Close()
+	ollamaBaseURL = srv.URL
+	t.Cleanup(func() { ollamaBaseURL = "http://localhost:11434" })
+
+	dir := t.TempDir()
+	configPathOverride = filepath.Join(dir, "config.json")
+	t.Cleanup(func() { configPathOverride = "" })
+
+	// Accept endpoint default, accept pull prompt (y), pull fails, enter fallback model name
+	input := strings.NewReader("\n\nllama3.2:1b\n\n\n")
+	var out bytes.Buffer
+	if err := Run(input, &out); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	data, _ := os.ReadFile(configPathOverride)
+	if !strings.Contains(string(data), "llama3.2:1b") {
+		t.Errorf("expected fallback model in config after pull failure, got: %s", data)
 	}
 }
