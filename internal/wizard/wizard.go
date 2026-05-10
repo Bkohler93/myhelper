@@ -59,12 +59,36 @@ func Run(r io.Reader, w io.Writer) error {
 	// Single bufio.Reader threaded through all steps — never create a second one over r.
 	br := bufio.NewReader(r)
 
+	// Declare line at function scope — used across all prompt stages.
+	var line string
+
 	// Stage 1: Ollama reachability check.
 	if !checkOllama() {
 		fmt.Fprintf(w, "Ollama is not running.\n\nInstall Ollama:\n  %s\n\nAfter installing, start Ollama and run `myhelper setup` again.\n", installInstructions())
 		return nil
 	}
 	fmt.Fprintf(w, "Ollama is running.\n\n")
+
+	// Stage 1.5: Ollama endpoint prompt — required field, loop until valid.
+	var endpointValue string
+	for {
+		fmt.Fprintf(w, "Ollama endpoint [%s]: ", ollamaBaseURL)
+		line, _ = br.ReadString('\n')
+		line = strings.TrimSpace(line)
+		if line == "" {
+			line = ollamaBaseURL // accept the pre-filled default
+		}
+		if !strings.HasPrefix(line, "http://") && !strings.HasPrefix(line, "https://") {
+			fmt.Fprintf(w, "Endpoint must begin with http:// or https://. Try again.\n")
+			continue
+		}
+		endpointValue = line
+		break
+	}
+	if err := mergeHomeConfig(map[string]interface{}{"endpoint": endpointValue}); err != nil {
+		fmt.Fprintf(w, "Warning: could not save endpoint: %v\n", err)
+	}
+	fmt.Fprintln(w)
 
 	// Stage 2: Hardware detection + model recommendation.
 	memMiB := detectMemoryMiB()
@@ -73,16 +97,39 @@ func Run(r io.Reader, w io.Writer) error {
 
 	// Stage 3: Model pull prompt.
 	fmt.Fprintf(w, "Pull %s now? [Y/n]: ", model)
-	line, _ := br.ReadString('\n')
+	line, _ = br.ReadString('\n')
 	line = strings.TrimSpace(line)
+	pullSucceeded := false
 	if line == "" || strings.ToLower(line) == "y" {
 		fmt.Fprintf(w, "Pulling %s...\n", model)
 		if err := pullModel(model, w); err != nil {
 			fmt.Fprintf(w, "Pull failed: %v\n", err)
+			// fall through to skip-model fallback below
 		} else {
 			// Write model field so subsequent runs use the pulled model.
 			_ = mergeHomeConfig(map[string]interface{}{"model": model})
 			fmt.Fprintf(w, "Model ready.\n")
+			pullSucceeded = true
+		}
+	}
+
+	// WIZ-01/WIZ-02: if pull was skipped or failed, require the user to name a local model.
+	if !pullSucceeded {
+		fmt.Fprintf(w, "Enter the name of a local model (run 'ollama list' to see available): ")
+		line, _ = br.ReadString('\n')
+		modelName := strings.TrimSpace(line)
+		if modelName == "" {
+			fmt.Fprintf(w, "Model name cannot be empty. Enter a model name: ")
+			line, _ = br.ReadString('\n')
+			modelName = strings.TrimSpace(line)
+		}
+		if modelName == "" {
+			return fmt.Errorf("no model name provided — setup incomplete")
+		}
+		if err := mergeHomeConfig(map[string]interface{}{"model": modelName}); err != nil {
+			fmt.Fprintf(w, "Warning: could not save model: %v\n", err)
+		} else {
+			fmt.Fprintf(w, "Model saved: %s\n", modelName)
 		}
 	}
 	fmt.Fprintln(w)
