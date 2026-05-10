@@ -2,6 +2,7 @@ package config
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -63,6 +64,8 @@ func Load() Config {
 	if v := os.Getenv("MYHELPER_TOKEN_LIMIT"); v != "" {
 		if n, err := strconv.Atoi(v); err == nil {
 			cfg.TokenThreshold = n
+		} else {
+			fmt.Fprintf(os.Stderr, "warning: MYHELPER_TOKEN_LIMIT %q is not a valid integer; using default\n", v)
 		}
 	}
 
