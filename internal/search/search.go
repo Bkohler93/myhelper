@@ -104,6 +104,9 @@ func LoadConfig() Config {
 	if v := os.Getenv("MYHELPER_TAVILY_KEY"); v != "" {
 		cfg.TavilyKey = v
 	}
+	if v := os.Getenv("MYHELPER_SEARCH_PROVIDER"); v != "" {
+		cfg.Provider = v
+	}
 
 	// Auto-select provider only when not explicitly set in config.
 	// This block runs after env vars so that a key supplied via env still triggers auto-selection.
