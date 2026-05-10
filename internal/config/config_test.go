@@ -119,4 +119,28 @@ func TestLoad(t *testing.T) {
 			t.Errorf("expected TokenThreshold 1500 (env overrides file), got %d", cfg.TokenThreshold)
 		}
 	})
+
+	t.Run("model and endpoint are empty when no config or env set", func(t *testing.T) {
+		t.Setenv("MYHELPER_MODEL", "")
+		t.Setenv("MYHELPER_ENDPOINT", "")
+		t.Setenv("MYHELPER_TOKEN_LIMIT", "")
+
+		dir := t.TempDir()
+		orig, err := os.Getwd()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Chdir(dir); err != nil {
+			t.Fatal(err)
+		}
+		defer func() { _ = os.Chdir(orig) }()
+
+		cfg := Load()
+		if cfg.Model != "" {
+			t.Errorf("expected empty Model, got %q (CFG-01)", cfg.Model)
+		}
+		if cfg.Endpoint != "" {
+			t.Errorf("expected empty Endpoint, got %q (CFG-02)", cfg.Endpoint)
+		}
+	})
 }
