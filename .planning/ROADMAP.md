@@ -165,7 +165,9 @@ Plans:
   1. After completing `myhelper setup` (any path through the wizard), a model name is always present in the written config
   2. When the user skips the recommended model pull, the wizard prompts them to enter the name of an existing local model before saving and exiting
   3. The wizard refuses to write config if the Ollama endpoint field is empty, prompting the user to correct it
-**Plans**: TBD
+**Plans**: 1 plan
+Plans:
+- [ ] 32-01-PLAN.md — Add endpoint prompt (Stage 1.5) and skip-model fallback to wizard
 
 ## Progress
 
