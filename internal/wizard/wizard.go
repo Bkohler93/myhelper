@@ -225,6 +225,14 @@ func pullModel(name string, w io.Writer) error {
 	}
 	defer resp.Body.Close()
 
+	// CR-01: check HTTP status before consuming the NDJSON body.
+	if resp.StatusCode != http.StatusOK {
+		b, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("ollama pull returned %d: %s", resp.StatusCode, strings.TrimSpace(string(b)))
+	}
+
+	// CR-02: track whether a "success" status line was received.
+	var succeeded bool
 	sc := bufio.NewScanner(resp.Body)
 	for sc.Scan() {
 		var p pullProgress
@@ -241,10 +249,18 @@ func pullModel(name string, w io.Writer) error {
 		}
 		if p.Status == "success" {
 			fmt.Fprintln(w)
+			succeeded = true
 			break
 		}
 	}
-	return sc.Err()
+	if err := sc.Err(); err != nil {
+		return err
+	}
+	// CR-02: if the stream ended without a "success" line, the download may be incomplete.
+	if !succeeded {
+		return fmt.Errorf("model pull ended without confirmation — download may be incomplete")
+	}
+	return nil
 }
 
 // mergeHomeConfig reads the existing home config file, merges updates into it (preserving
