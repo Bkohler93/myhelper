@@ -13,6 +13,7 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // Package-level vars for test injection (set in tests only; never modify in production code).
@@ -21,6 +22,14 @@ var ollamaBaseURL = "http://localhost:11434"
 // configPathOverride, if non-empty, is returned by homeConfigPath() instead of the real path.
 // Set this in tests to redirect config writes to a t.TempDir() path.
 var configPathOverride = ""
+
+// ollamaHTTPClient is used for quick reachability checks (short timeout).
+// WR-01: use a bounded client instead of the default (no-timeout) http.Get.
+var ollamaHTTPClient = &http.Client{Timeout: 5 * time.Second}
+
+// pullHTTPClient is used for model pulls — allow up to 5 minutes for large downloads.
+// WR-01: use a bounded client instead of the default (no-timeout) http.Post.
+var pullHTTPClient = &http.Client{Timeout: 5 * time.Minute}
 
 // pullRequest is the JSON body sent to the Ollama /api/pull endpoint.
 type pullRequest struct {
@@ -117,7 +126,8 @@ func Run(r io.Reader, w io.Writer) error {
 // Uses ollamaBaseURL (overridable in tests); defaults to http://localhost:11434.
 // Returns true on HTTP 200; returns false on any error or non-200 status.
 func checkOllama() bool {
-	resp, err := http.Get(ollamaBaseURL + "/")
+	// WR-01: use ollamaHTTPClient (5s timeout) instead of the default no-timeout http.Get.
+	resp, err := ollamaHTTPClient.Get(ollamaBaseURL + "/")
 	if err != nil {
 		return false
 	}
@@ -219,7 +229,8 @@ func recommendModel(memMiB int64) (name string, requiredMiB int64) {
 // It uses a bufio.Scanner over resp.Body (a separate io.Reader from the wizard's stdin).
 func pullModel(name string, w io.Writer) error {
 	body, _ := json.Marshal(pullRequest{Name: name, Stream: true})
-	resp, err := http.Post(ollamaBaseURL+"/api/pull", "application/json", bytes.NewReader(body))
+	// WR-01: use pullHTTPClient (5m timeout) instead of the default no-timeout http.Post.
+	resp, err := pullHTTPClient.Post(ollamaBaseURL+"/api/pull", "application/json", bytes.NewReader(body))
 	if err != nil {
 		return fmt.Errorf("pull request: %w", err)
 	}
