@@ -288,6 +288,44 @@
 
 ---
 
+## Milestone: v5.1 — Configuration Validation & Setup Hardening
+
+**Shipped:** 2026-05-10
+**Phases:** 2 (31-32) | **Plans:** 3
+
+### What Was Built
+- `config.Load()` returns empty strings for Model/Endpoint when unset — hardcoded defaults removed
+- `validateConfig()` gates all commands (chat, inspect, search) before any Ollama calls; fails with "myhelper setup" hint
+- Wizard collects Ollama endpoint as Stage 1 (before reachability check); `url.Parse` validates URLs
+- Wizard skip-model fallback always writes a model even when user declines pull
+- `pullModel` receives endpoint explicitly — no silent localhost fallback for remote Ollama users
+
+### What Worked
+- Smart discuss in autonomous mode surfaced all grey areas efficiently before planning — 2 areas, both accepted in first pass
+- Code review caught 2 critical bugs in Phase 32 (pullModel using wrong endpoint, reachability before prompt) that would have broken remote Ollama users — worth every token
+- Autonomous mode completed both phases plus full lifecycle (audit → complete → cleanup trigger) without user intervention except grey area acceptance
+
+### What Was Inefficient
+- Phase 31's CFG-01/CFG-02 test didn't isolate `$HOME` — discovered only during milestone audit. Could have been caught with a quick `-count=1` run in the executor's self-check.
+- The gsd-sdk `query` command doesn't function as the workflow expects (it's a different binary than what the workflow scripts assume) — every `gsd-sdk query init.*` call fails. The autonomous workflow adapts gracefully but the failure is noisy.
+
+### Patterns Established
+- `t.Setenv("HOME", t.TempDir())` is needed whenever a config test's `Load()` might hit `homeConfigPath()` — add alongside `t.TempDir()` + `os.Chdir` for full isolation
+- Endpoint prompts should come BEFORE reachability checks when the endpoint is user-configurable
+- `pullModel` and similar network functions should receive the target URL explicitly, not read from a package-level var
+
+### Key Lessons
+- Test isolation is a cross-phase concern: Phase 31's test gap only surfaced when Phase 32's wizard started writing to the real home config during testing
+- Code review in autonomous mode caught design-level issues that plan review missed (CR-02: reachability-before-prompt ordering was accepted during plan-check but caught in code review)
+- The milestone audit step is valuable even for small milestones — it found a real integration test failure before tagging
+
+### Cost Observations
+- Model mix: sonnet throughout (autonomous mode)
+- Sessions: 1 (full autonomous run, both phases + lifecycle)
+- Notable: +408 lines across 9 files; small milestone, high quality — 3 code review critical findings fixed before ship
+
+---
+
 ## Cross-Milestone Trends
 
 ### Process Evolution

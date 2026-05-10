@@ -13,7 +13,7 @@
 - ✅ **v3.3 Rich Chat UX** — Phases 24-25 (shipped 2026-04-25)
 - ✅ **v4.0 Search-First Simplification** — Phases 26-27 (shipped 2026-04-26)
 - ✅ **v5.0 Distribution & First-Run Setup** — Phases 28-30 (shipped 2026-05-10)
-- 🚧 **v5.1 Configuration Validation & Setup Hardening** — Phases 31-32 (in progress)
+- ✅ **v5.1 Configuration Validation & Setup Hardening** — Phases 31-32 (shipped 2026-05-10)
 
 ## Phases
 
@@ -134,40 +134,15 @@ Full archive: `.planning/milestones/v5.0-ROADMAP.md`
 
 </details>
 
-### 🚧 v5.1 Configuration Validation & Setup Hardening (In Progress)
+<details>
+<summary>✅ v5.1 Configuration Validation & Setup Hardening (Phases 31-32) — SHIPPED 2026-05-10</summary>
 
-**Milestone Goal:** Remove all hardcoded model/endpoint defaults and fail fast with clear errors when required config is missing — myhelper should never silently use a model the user didn't choose.
+- [x] Phase 31: Config Loading & Startup Validation (2/2 plans) — completed 2026-05-10
+- [x] Phase 32: Setup Wizard Hardening (1/1 plan) — completed 2026-05-10
 
-- [x] **Phase 31: Config Loading & Startup Validation** (2/2 plans) — completed 2026-05-10
-- [x] **Phase 32: Setup Wizard Hardening** (1/1 plans) — completed 2026-05-10
+Full archive: `.planning/milestones/v5.1-ROADMAP.md`
 
-## Phase Details
-
-### Phase 31: Config Loading & Startup Validation
-**Goal**: myhelper refuses to run without explicit model and endpoint configuration, and tells the user exactly how to fix it
-**Depends on**: Phase 30
-**Requirements**: CFG-01, CFG-02, VAL-01, VAL-02, VAL-03, VAL-04, VAL-05
-**Success Criteria** (what must be TRUE):
-  1. Running `myhelper chat` with no config or env produces a clear error message and a "run myhelper setup" hint instead of connecting to a hardcoded endpoint
-  2. Running `myhelper inspect` or `myhelper search` with no config produces the same error format as chat
-  3. Setting `MYHELPER_MODEL` and `MYHELPER_ENDPOINT` env vars allows all three commands to proceed without error
-  4. Config loading never returns a non-empty default for model or endpoint — the fields are empty string when unset in both config file and env
-**Plans**: 2 plans
-Plans:
-- [x] 31-01-PLAN.md — Remove hardcoded defaults from config.Load() and add CFG-01/CFG-02 tests
-- [x] 31-02-PLAN.md — Add validateConfig helper and call sites in root.go and inspect.go
-
-### Phase 32: Setup Wizard Hardening
-**Goal**: The setup wizard is guaranteed to write a usable model and endpoint to config before it exits — no more silent exit leaving the user with an incomplete config
-**Depends on**: Phase 31
-**Requirements**: WIZ-01, WIZ-02, WIZ-03
-**Success Criteria** (what must be TRUE):
-  1. After completing `myhelper setup` (any path through the wizard), a model name is always present in the written config
-  2. When the user skips the recommended model pull, the wizard prompts them to enter the name of an existing local model before saving and exiting
-  3. The wizard refuses to write config if the Ollama endpoint field is empty, prompting the user to correct it
-**Plans**: 1 plan
-Plans:
-- [x] 32-01-PLAN.md — Add endpoint prompt (Stage 1.5) and skip-model fallback to wizard
+</details>
 
 ## Progress
 

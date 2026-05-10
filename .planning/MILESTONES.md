@@ -1,5 +1,21 @@
 # Milestones
 
+## v5.1 Configuration Validation & Setup Hardening (Shipped: 2026-05-10)
+
+**Phases completed:** 2 phases (31–32), 3 plans
+**Files changed:** 9 files, +408 / -24 lines
+**Timeline:** 2026-05-10 (1 day)
+
+**Key accomplishments:**
+
+- Removed hardcoded `DefaultEndpoint` and `DefaultModel` constants from `config.go`; `config.Load()` now returns empty strings for Model and Endpoint when not set — `validateConfig()` can reliably detect absent config (Phase 31)
+- `validateConfig(cfg config.Config) error` added to `cmd/helpers.go`; wired into `rootCmd.RunE` and `runInspect`; `SilenceErrors=true` prevents cobra double-print — hard-fails chat/inspect/search with "myhelper setup" hint (Phase 31)
+- Wizard now collects Ollama endpoint as Stage 1 (before reachability check); `url.Parse` validates non-bare-scheme URLs; `mergeHomeConfig({"endpoint":...})` called unconditionally — remote Ollama users can now configure their endpoint (Phase 32)
+- Skip-model fallback added via `pullSucceeded` flag: when user declines pull or pull fails, wizard prompts for existing model name; loops once on empty; returns error on double-empty — model is always written before exit (Phase 32)
+- `pullModel` now receives endpoint explicitly — wizard's validated endpoint used for pull, not the package-level `ollamaBaseURL` default (Phase 32 code review fix)
+
+---
+
 ## v5.0 Distribution & First-Run Setup (Shipped: 2026-05-10)
 
 **Phases completed:** 3 phases (28–30), 6 plans

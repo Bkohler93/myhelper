@@ -8,14 +8,7 @@ A Go CLI that provides fast, local-model-powered chat (`myhelper chat`) with opt
 
 Fast, local AI chat with optional web search — inference runs locally via Ollama, search is pluggable (Tavily or self-hosted SearXNG), no cloud AI required.
 
-## Current Milestone: v5.1 Configuration Validation & Setup Hardening
-
-**Goal:** Remove all hardcoded model/endpoint defaults and fail fast with clear errors when required config is missing — myhelper should never silently use a model the user didn't choose.
-
-**Target features:**
-- Remove hardcoded defaults for model (`qwen2.5-coder:7b`) and endpoint (`192.168.0.9:11434`) from config loading
-- Config validation on startup: chat, inspect, and search hard-fail with clear error + "run myhelper setup" hint when model or endpoint is unset (env vars count as "set")
-- Setup wizard fix: always write a model — if user skips the recommended pull, prompt for an existing local model name before exiting
+## Current State: v5.1 Shipped — Planning Next Milestone
 
 ## Requirements
 
@@ -69,11 +62,13 @@ Fast, local AI chat with optional web search — inference runs locally via Olla
 - ✓ Tavily as default search provider with API key in config or MYHELPER_TAVILY_KEY env var — v5.0
 - ✓ `myhelper setup` interactive wizard: Ollama check, hardware detection, model pull, Tavily key, SearXNG endpoint — v5.0
 
-### Active
+### Validated (v5.1)
 
-- [ ] Remove hardcoded model/endpoint defaults; require explicit config — v5.1
-- [ ] Config validation: hard-fail with clear error when model or endpoint unset — v5.1
-- [ ] Setup wizard: always write a model (prompt for existing if pull skipped) — v5.1
+- ✓ Hardcoded model/endpoint defaults removed from config.Load(); empty string when unset — v5.1
+- ✓ Config validation: hard-fail with "myhelper setup" hint when model or endpoint unset — v5.1
+- ✓ Setup wizard: always writes endpoint + model before exit; fallback prompt when pull skipped — v5.1
+
+### Active
 
 ### Deferred (post v5.1)
 
@@ -98,14 +93,17 @@ Fast, local AI chat with optional web search — inference runs locally via Olla
 - **Model constraint**: ~8k context window — token threshold at 4,100 triggers summarization before overflow
 - **Primary use case**: Solo developer productivity tool; local-only execution
 - **Target platforms**: macOS (dev machine, Apple Silicon) + WSL/Linux (Windows work laptop)
-- **Codebase state (v5.0)**: `cmd/`: chat, inspect, search, helpers, root, setup; `internal/`: config, history, ollama, search, wizard — lean and live
+- **Codebase state (v5.1)**: `cmd/`: chat, inspect, search, helpers, root, setup; `internal/`: config, history, ollama, search, wizard — lean and live
 - **Tech stack**: Go, cobra, chzyer/readline, glamour (markdown rendering), go-tiktoken, Tavily API, SearXNG JSON API
 - **Distribution**: goreleaser v2, GitHub Actions, curl-pipe install.sh — multi-platform binaries on GitHub Releases
 - **Search providers**: Tavily (API key, free 1k/month) as default when key present; SearXNG (self-hosted) as configurable alternative
-- **Known tech debt (v5.0)**:
+- **Known tech debt (v5.1)**:
   - CLAUDE.md Architecture section describes deleted packages — documentation drift, does not affect build
   - `llmReRank` always returns nil error by design — named `reRankErr` branches are technically dead code
   - install.sh extraction path assumes binary at archive root — verify against real goreleaser archive on first tag push
+  - `validateConfig` combined-error branch (`Endpoint=="" && Model==""`) is dead code — single-field branches fire first
+  - `search_test.go` subtests lack HOME isolation (same gap fixed in Phase 31 config tests) — tests pass cached but may fail `-count=1` on machine with home config
+  - Wizard endpoint-probe tests take ~5s each due to HTTP timeout on user-supplied non-default endpoint
 
 ## Constraints
 
@@ -143,6 +141,10 @@ Fast, local AI chat with optional web search — inference runs locally via Olla
 | Tavily ordered before SearXNG in Phase 29 | Wizard must write tavily_key config field; provider must exist before wizard can configure it | ✓ v5.0 — ordering |
 | Homebrew tap deferred | curl installer covers WSL primary use case; tap adds CI complexity | — v5.0; DIST-F01 |
 | OpenAI-compatible endpoint deferred | Ollama-only for v5.0; OpenAI-compat is a future nice-to-have | — v5.0; INFER-F01 |
+| Hard-fail on missing config (not auto-redirect to setup) | Simpler and more predictable; auto-redirect hides the config problem | ✓ v5.1 — VAL-01/02/03 |
+| Endpoint prompt moved before reachability check in wizard | Remote Ollama users can't pass reachability check without first providing their endpoint | ✓ v5.1 — WIZ-03 |
+| pullModel receives endpoint explicitly (not package-level var) | Wizard's validated endpoint must be used for pull; using ollamaBaseURL silently targets wrong host | ✓ v5.1 — WIZ-01/02 |
+| url.Parse validation for endpoints (not just HasPrefix) | Bare `http://` passes HasPrefix but has no host — url.Parse catches this | ✓ v5.1 — WR-01 fix |
 
 ## Evolution
 
@@ -155,4 +157,4 @@ This document evolves at milestone boundaries.
 4. Context + architecture update
 
 ---
-*Last updated: 2026-05-10 — v5.1 Configuration Validation & Setup Hardening milestone started*
+*Last updated: 2026-05-10 after v5.1 milestone — Configuration Validation & Setup Hardening shipped*
