@@ -124,8 +124,8 @@ Full archive: `.planning/milestones/v4.0-ROADMAP.md`
 
 ### v5.0 Distribution & First-Run Setup
 
-- [ ] **Phase 28: Distribution** - goreleaser build pipeline, GitHub Actions release workflow, and curl install script
-- [ ] **Phase 29: Tavily Search Provider** - Tavily API integration as the default search provider with env var and config support
+- [x] **Phase 28: Distribution** - goreleaser build pipeline, GitHub Actions release workflow, and curl install script — completed 2026-05-09
+- [x] **Phase 29: Tavily Search Provider** - Tavily API integration as the default search provider with env var and config support — completed 2026-05-10
 - [ ] **Phase 30: Setup Wizard** - `myhelper setup` interactive first-run wizard covering Ollama, hardware detection, model pull, and search config
 
 ## Phase Details
@@ -150,7 +150,10 @@ Full archive: `.planning/milestones/v4.0-ROADMAP.md`
   2. User can set `MYHELPER_TAVILY_KEY` env var to provide their Tavily key, overriding config
   3. User can switch between Tavily and SearXNG by changing `search_provider` in config.json
   4. User with no Tavily key and a SearXNG endpoint continues to get SearXNG results unchanged
-**Plans**: TBD
+**Plans**: 1 plan
+
+Plans:
+- [x] 29-01-PLAN.md — Extend search.go and search_test.go: Config fields, LoadConfig Tavily key resolution, tavilySearch client, provider dispatch — complete 2026-05-10
 
 ### Phase 30: Setup Wizard
 **Goal**: A new user can go from zero to working chat in a single `myhelper setup` run
@@ -162,8 +165,12 @@ Full archive: `.planning/milestones/v4.0-ROADMAP.md`
   3. User can confirm in-wizard to pull the recommended model without leaving the terminal
   4. User is prompted for a Tavily API key and the key is written to `~/.config/myhelper/config.json`
   5. User can optionally enter a SearXNG endpoint and it is written to config
-**Plans**: TBD
+**Plans**: 2 plans
 **UI hint**: yes
+
+Plans:
+- [ ] 30-01-PLAN.md — Create internal/wizard/wizard.go: all wizard logic (checkOllama, installInstructions, detectMemoryMiB, recommendModel, pullModel, mergeHomeConfig, Run)
+- [ ] 30-02-PLAN.md — Create internal/wizard/wizard_test.go and cmd/setup.go: unit tests and cobra subcommand wiring
 
 ## Progress
 
@@ -196,6 +203,6 @@ Full archive: `.planning/milestones/v4.0-ROADMAP.md`
 | 25. Markdown Rendering | v3.3 | 1/1 | Complete | 2026-04-25 |
 | 26. Dead Code Purge | v4.0 | 1/1 | Complete | 2026-04-26 |
 | 27. Inspect Rewrite | v4.0 | 1/1 | Complete | 2026-04-26 |
-| 28. Distribution | v5.0 | 0/? | Not started | - |
-| 29. Tavily Search Provider | v5.0 | 0/? | Not started | - |
-| 30. Setup Wizard | v5.0 | 0/? | Not started | - |
+| 28. Distribution | v5.0 | 3/3 | Complete | 2026-05-09 |
+| 29. Tavily Search Provider | v5.0 | 1/1 | Complete | 2026-05-10 |
+| 30. Setup Wizard | v5.0 | 0/2 | Not started | - |
