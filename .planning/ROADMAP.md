@@ -152,7 +152,10 @@ Full archive: `.planning/milestones/v5.0-ROADMAP.md`
   2. Running `myhelper inspect` or `myhelper search` with no config produces the same error format as chat
   3. Setting `MYHELPER_MODEL` and `MYHELPER_ENDPOINT` env vars allows all three commands to proceed without error
   4. Config loading never returns a non-empty default for model or endpoint — the fields are empty string when unset in both config file and env
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 31-01-PLAN.md — Remove hardcoded defaults from config.Load() and add CFG-01/CFG-02 tests
+- [ ] 31-02-PLAN.md — Add validateConfig helper and call sites in root.go and inspect.go
 
 ### Phase 32: Setup Wizard Hardening
 **Goal**: The setup wizard is guaranteed to write a usable model and endpoint to config before it exits — no more silent exit leaving the user with an incomplete config
@@ -198,5 +201,5 @@ Full archive: `.planning/milestones/v5.0-ROADMAP.md`
 | 28. Distribution | v5.0 | 3/3 | Complete | 2026-05-09 |
 | 29. Tavily Search Provider | v5.0 | 1/1 | Complete | 2026-05-10 |
 | 30. Setup Wizard | v5.0 | 2/2 | Complete | 2026-05-10 |
-| 31. Config Loading & Startup Validation | v5.1 | 0/? | Not started | - |
+| 31. Config Loading & Startup Validation | v5.1 | 0/2 | Not started | - |
 | 32. Setup Wizard Hardening | v5.1 | 0/? | Not started | - |

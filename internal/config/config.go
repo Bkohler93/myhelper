@@ -8,8 +8,6 @@ import (
 )
 
 const (
-	DefaultEndpoint       = "192.168.1.146:11434"
-	DefaultModel          = "qwen2.5-coder:7b"
 	DefaultTokenThreshold = 4100
 )
 
@@ -29,8 +27,6 @@ type Config struct {
 //  3. Hardcoded defaults
 func Load() Config {
 	cfg := Config{
-		Endpoint:       DefaultEndpoint,
-		Model:          DefaultModel,
 		TokenThreshold: DefaultTokenThreshold,
 	}
 
