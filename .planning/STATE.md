@@ -55,8 +55,9 @@ None.
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
 | 260510-q01 | Add --model flag; rework setup model selection to list/pull | 2026-05-10 | 95f0116 | [260510-q01-model-flag-setup-rework](./quick/260510-q01-model-flag-setup-rework/) |
+| 260510-q02 | Show existing Tavily API key status in setup; allow skipping re-entry | 2026-05-10 | TBD | [260510-q02-setup-tavily-key-status](./quick/260510-q02-setup-tavily-key-status/) |
 
 ## Session Continuity
 
 Last session: 2026-05-10
-Stopped at: v5.1 complete and archived — ready for /gsd-new-milestone; quick task 260510-q01 complete
+Stopped at: v5.1 complete and archived — ready for /gsd-new-milestone; quick task 260510-q02 complete
