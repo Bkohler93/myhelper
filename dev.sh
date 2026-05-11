@@ -1,1 +1,1 @@
-go build -o tmp/myhelper . && ./tmp/myhelper $1 $2
+go build -o tmp/myhelper . 
