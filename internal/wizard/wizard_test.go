@@ -208,8 +208,8 @@ func TestRun_SkipAll(t *testing.T) {
 	configPathOverride = filepath.Join(dir, "config.json")
 	t.Cleanup(func() { configPathOverride = "" })
 
-	// Stage 1.5: "" accepts default endpoint; "n" skips pull; "mymodel" satisfies fallback;
-	// "" skips Tavily; "" skips SearXNG.
+	// "" accepts default endpoint; "n" used as model name (pull fails, saved anyway);
+	// "mymodel" consumed as Tavily key; "" skips SearXNG.
 	input := strings.NewReader("\nn\nmymodel\n\n\n")
 	var out bytes.Buffer
 	if err := Run(input, &out); err != nil {
@@ -342,8 +342,8 @@ func TestRun_SkipModel_EmptyThenProvided(t *testing.T) {
 	configPathOverride = filepath.Join(dir, "config.json")
 	t.Cleanup(func() { configPathOverride = "" })
 
-	// Accept endpoint default, skip pull, first fallback empty, second fallback valid
-	input := strings.NewReader("\nn\n\ngemma3:4b\n\n\n")
+	// Accept endpoint default; first model-name entry empty (re-prompt); second valid
+	input := strings.NewReader("\n\ngemma3:4b\n\n\n")
 	var out bytes.Buffer
 	if err := Run(input, &out); err != nil {
 		t.Fatalf("Run: %v", err)
@@ -366,8 +366,8 @@ func TestRun_SkipModel_EmptyTwice(t *testing.T) {
 	configPathOverride = filepath.Join(dir, "config.json")
 	t.Cleanup(func() { configPathOverride = "" })
 
-	// Accept endpoint default, skip pull, both fallback answers empty
-	input := strings.NewReader("\nn\n\n\n")
+	// Accept endpoint default; both model-name entries empty — expect error
+	input := strings.NewReader("\n\n\n")
 	var out bytes.Buffer
 	err := Run(input, &out)
 	if err == nil {

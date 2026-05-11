@@ -15,6 +15,7 @@ var (
 	searchForce    bool
 	searchSuppress bool
 	tokenLimitFlag int
+	modelFlag      string
 )
 
 // Version info — set by goreleaser ldflags at build time:
@@ -34,6 +35,7 @@ func init() {
 	rootCmd.PersistentFlags().BoolVar(&searchForce, "search", false, "Force web search regardless of gate result")
 	rootCmd.PersistentFlags().BoolVar(&searchSuppress, "no-search", false, "Suppress web search entirely")
 	rootCmd.PersistentFlags().IntVar(&tokenLimitFlag, "token-limit", 0, "override token threshold for conversation history (default 4100)")
+	rootCmd.PersistentFlags().StringVar(&modelFlag, "model", "", "override model for this invocation")
 }
 
 var rootCmd = &cobra.Command{
@@ -78,5 +80,8 @@ func Execute() {
 func ApplyFlagOverrides(cfg *config.Config) {
 	if tokenLimitFlag > 0 {
 		cfg.TokenThreshold = tokenLimitFlag
+	}
+	if modelFlag != "" {
+		cfg.Model = modelFlag
 	}
 }

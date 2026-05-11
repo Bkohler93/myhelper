@@ -12,6 +12,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -47,16 +48,46 @@ type pullProgress struct {
 	Error     string `json:"error,omitempty"`
 }
 
+// tagsResponse is the JSON response from the Ollama /api/tags endpoint.
+type tagsResponse struct {
+	Models []struct {
+		Name string `json:"name"`
+	} `json:"models"`
+}
+
+// listModels returns the names of locally available Ollama models, sorted alphabetically.
+// Returns an empty slice (not an error) when Ollama is reachable but has no models.
+func listModels(endpoint string) ([]string, error) {
+	resp, err := ollamaHTTPClient.Get(endpoint + "/api/tags")
+	if err != nil {
+		return nil, fmt.Errorf("list models: %w", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("ollama /api/tags returned %d: %s", resp.StatusCode, strings.TrimSpace(string(body)))
+	}
+	var tags tagsResponse
+	if err := json.NewDecoder(resp.Body).Decode(&tags); err != nil {
+		return nil, fmt.Errorf("decode /api/tags: %w", err)
+	}
+	names := make([]string, 0, len(tags.Models))
+	for _, m := range tags.Models {
+		names = append(names, m.Name)
+	}
+	sort.Strings(names)
+	return names, nil
+}
+
 // Run executes the interactive setup wizard. It reads from r and writes to w.
 // Pass os.Stdin / os.Stdout in production; use *strings.Reader / *bytes.Buffer in tests.
 //
 // Wizard stages:
 //  1. Prompt for Ollama endpoint (so the reachability check uses the correct URL).
 //  2. Check Ollama reachability at the confirmed endpoint; print install instructions and return if not running.
-//  3. Detect hardware memory (VRAM or RAM) and recommend a model.
-//  4. Prompt user to pull the recommended model.
-//  5. Prompt for Tavily API key (optional).
-//  6. Prompt for SearXNG endpoint (optional).
+//  3. List locally available Ollama models; let user pick one or pull a new one by name.
+//  4. Prompt for Tavily API key (optional).
+//  5. Prompt for SearXNG endpoint (optional).
 func Run(r io.Reader, w io.Writer) error {
 	// Single bufio.Reader threaded through all steps — never create a second one over r.
 	br := bufio.NewReader(r)
@@ -96,32 +127,39 @@ func Run(r io.Reader, w io.Writer) error {
 	}
 	fmt.Fprintf(w, "Ollama is running.\n\n")
 
-	// Stage 2: Hardware detection + model recommendation.
-	memMiB := detectMemoryMiB()
-	model, reqMiB := recommendModel(memMiB)
-	fmt.Fprintf(w, "Detected memory: %d MiB\nRecommended model: %s (requires ~%d MiB)\n\n", memMiB, model, reqMiB)
-
-	// Stage 3: Model pull prompt.
-	fmt.Fprintf(w, "Pull %s now? [Y/n]: ", model)
-	line, _ = br.ReadString('\n')
-	line = strings.TrimSpace(line)
-	pullSucceeded := false
-	if line == "" || strings.ToLower(line) == "y" {
-		fmt.Fprintf(w, "Pulling %s...\n", model)
-		if err := pullModel(model, endpointValue, w); err != nil {
-			fmt.Fprintf(w, "Pull failed: %v\n", err)
-			// fall through to skip-model fallback below
-		} else {
-			// Write model field so subsequent runs use the pulled model.
-			_ = mergeHomeConfig(map[string]interface{}{"model": model})
-			fmt.Fprintf(w, "Model ready.\n")
-			pullSucceeded = true
-		}
+	// Stage 3: Model selection — list available models or pull a new one.
+	models, listErr := listModels(endpointValue)
+	if listErr != nil {
+		fmt.Fprintf(w, "Warning: could not list models: %v\n", listErr)
 	}
 
-	// WIZ-01/WIZ-02: if pull was skipped or failed, require the user to name a local model.
-	if !pullSucceeded {
-		fmt.Fprintf(w, "Enter the name of a local model (run 'ollama list' to see available): ")
+	chosenModel := ""
+	if len(models) > 0 {
+		fmt.Fprintf(w, "Available models:\n")
+		for i, m := range models {
+			fmt.Fprintf(w, "  [%d] %s\n", i+1, m)
+		}
+		fmt.Fprintf(w, "  [0] Pull a new model\n\n")
+		fmt.Fprintf(w, "Select a model [1]: ")
+		line, _ = br.ReadString('\n')
+		line = strings.TrimSpace(line)
+		if line == "" {
+			line = "1"
+		}
+		if idx, err := strconv.Atoi(line); err == nil && idx >= 1 && idx <= len(models) {
+			chosenModel = models[idx-1]
+			if err := mergeHomeConfig(map[string]interface{}{"model": chosenModel}); err != nil {
+				fmt.Fprintf(w, "Warning: could not save model: %v\n", err)
+			} else {
+				fmt.Fprintf(w, "Default model set to: %s\n", chosenModel)
+			}
+		}
+		// idx == 0 or invalid → fall through to pull flow below
+	}
+
+	if chosenModel == "" {
+		// No models available or user chose to pull a new one.
+		fmt.Fprintf(w, "Enter model name to pull (e.g. llama3.2:3b): ")
 		line, _ = br.ReadString('\n')
 		modelName := strings.TrimSpace(line)
 		if modelName == "" {
@@ -132,10 +170,17 @@ func Run(r io.Reader, w io.Writer) error {
 		if modelName == "" {
 			return fmt.Errorf("no model name provided — setup incomplete")
 		}
+		fmt.Fprintf(w, "Pulling %s...\n", modelName)
+		if err := pullModel(modelName, endpointValue, w); err != nil {
+			fmt.Fprintf(w, "Pull failed: %v\n", err)
+			fmt.Fprintf(w, "Saving model name anyway. If the pull failed, run 'ollama pull %s' manually.\n", modelName)
+		} else {
+			fmt.Fprintf(w, "Model ready.\n")
+		}
 		if err := mergeHomeConfig(map[string]interface{}{"model": modelName}); err != nil {
 			fmt.Fprintf(w, "Warning: could not save model: %v\n", err)
 		} else {
-			fmt.Fprintf(w, "Model saved: %s\n", modelName)
+			fmt.Fprintf(w, "Default model set to: %s\n", modelName)
 		}
 	}
 	fmt.Fprintln(w)
