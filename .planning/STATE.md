@@ -50,7 +50,13 @@ None.
 | test isolation | search_test.go HOME isolation gap — same pattern fixed in Phase 31 config tests | v5.1 tech debt |
 | dead code | validateConfig combined-error branch is dead code (endpoint branch fires first) | v5.1 tech debt |
 
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 260510-q01 | Add --model flag; rework setup model selection to list/pull | 2026-05-10 | 95f0116 | [260510-q01-model-flag-setup-rework](./quick/260510-q01-model-flag-setup-rework/) |
+
 ## Session Continuity
 
 Last session: 2026-05-10
-Stopped at: v5.1 complete and archived — ready for /gsd-new-milestone
+Stopped at: v5.1 complete and archived — ready for /gsd-new-milestone; quick task 260510-q01 complete
