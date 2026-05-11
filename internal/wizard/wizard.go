@@ -186,7 +186,14 @@ func Run(r io.Reader, w io.Writer) error {
 	fmt.Fprintln(w)
 
 	// Stage 4: Tavily API key (optional).
-	fmt.Fprintf(w, "Tavily API key (enter to skip): ")
+	existingCfg := readHomeConfig()
+	existingTavilyKey, _ := existingCfg["tavily_key"].(string)
+	if existingTavilyKey != "" {
+		fmt.Fprintf(w, "Tavily API key already configured (%s).\n", maskKey(existingTavilyKey))
+		fmt.Fprintf(w, "New Tavily API key (press enter to keep existing): ")
+	} else {
+		fmt.Fprintf(w, "Tavily API key (enter to skip): ")
+	}
 	line, _ = br.ReadString('\n')
 	line = strings.TrimSpace(line)
 	if line != "" {
@@ -195,6 +202,8 @@ func Run(r io.Reader, w io.Writer) error {
 		} else {
 			fmt.Fprintf(w, "Tavily key saved.\n")
 		}
+	} else if existingTavilyKey != "" {
+		fmt.Fprintf(w, "Keeping existing Tavily key.\n")
 	}
 	fmt.Fprintln(w)
 
@@ -399,6 +408,32 @@ func mergeHomeConfig(updates map[string]interface{}) error {
 		return err
 	}
 	return os.WriteFile(path, data, 0600)
+}
+
+// readHomeConfig reads the current home config file and returns it as a map.
+// Returns an empty map on any error (missing file, parse failure, etc.).
+func readHomeConfig() map[string]interface{} {
+	path := homeConfigPath()
+	result := map[string]interface{}{}
+	if path == "" {
+		return result
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return result
+	}
+	_ = json.Unmarshal(data, &result)
+	return result
+}
+
+// maskKey returns a partially-obscured version of an API key for display.
+// Shows the first 4 and last 4 characters; replaces the middle with bullets.
+// For keys 8 chars or shorter, returns all bullets.
+func maskKey(key string) string {
+	if len(key) <= 8 {
+		return strings.Repeat("•", len(key))
+	}
+	return key[:4] + strings.Repeat("•", len(key)-8) + key[len(key)-4:]
 }
 
 // homeConfigPath returns the canonical path to the global myhelper config file.

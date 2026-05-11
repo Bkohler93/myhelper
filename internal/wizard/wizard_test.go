@@ -380,6 +380,111 @@ func TestRun_SkipModel_EmptyTwice(t *testing.T) {
 	}
 }
 
+func TestRun_TavilyKeyExisting_SkipKeepsExisting(t *testing.T) {
+	// Server returns 200 on / and a single-model tags response on /api/tags.
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/api/tags" {
+			w.Header().Set("Content-Type", "application/json")
+			fmt.Fprint(w, `{"models":[{"name":"llama3.2:1b"}]}`)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer srv.Close()
+	ollamaBaseURL = srv.URL
+	t.Cleanup(func() { ollamaBaseURL = "http://localhost:11434" })
+
+	dir := t.TempDir()
+	configPathOverride = filepath.Join(dir, "config.json")
+	t.Cleanup(func() { configPathOverride = "" })
+
+	// Pre-write config with existing Tavily key.
+	if err := os.WriteFile(configPathOverride, []byte(`{"tavily_key":"existing-key-abc123"}`), 0600); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+
+	// Inputs: accept default endpoint; accept model [1] (default); press enter at Tavily (keep existing); skip SearXNG.
+	input := strings.NewReader("\n\n\n\n")
+	var out bytes.Buffer
+	if err := Run(input, &out); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+
+	output := out.String()
+	if !strings.Contains(output, "already configured") {
+		t.Errorf("expected 'already configured' in output, got: %q", output)
+	}
+	if !strings.Contains(output, "Keeping existing Tavily key") {
+		t.Errorf("expected 'Keeping existing Tavily key' in output, got: %q", output)
+	}
+
+	data, _ := os.ReadFile(configPathOverride)
+	if !strings.Contains(string(data), "existing-key-abc123") {
+		t.Errorf("expected original Tavily key preserved in config, got: %s", data)
+	}
+}
+
+func TestRun_TavilyKeyExisting_NewKeyReplaces(t *testing.T) {
+	// Server returns 200 on / and a single-model tags response on /api/tags.
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/api/tags" {
+			w.Header().Set("Content-Type", "application/json")
+			fmt.Fprint(w, `{"models":[{"name":"llama3.2:1b"}]}`)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer srv.Close()
+	ollamaBaseURL = srv.URL
+	t.Cleanup(func() { ollamaBaseURL = "http://localhost:11434" })
+
+	dir := t.TempDir()
+	configPathOverride = filepath.Join(dir, "config.json")
+	t.Cleanup(func() { configPathOverride = "" })
+
+	// Pre-write config with existing Tavily key.
+	if err := os.WriteFile(configPathOverride, []byte(`{"tavily_key":"old-key-xyz"}`), 0600); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+
+	// Inputs: accept default endpoint; accept model [1]; enter new Tavily key; skip SearXNG.
+	input := strings.NewReader("\n\nnew-key-abc\n\n")
+	var out bytes.Buffer
+	if err := Run(input, &out); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+
+	output := out.String()
+	if !strings.Contains(output, "Tavily key saved") {
+		t.Errorf("expected 'Tavily key saved' in output, got: %q", output)
+	}
+
+	data, _ := os.ReadFile(configPathOverride)
+	if !strings.Contains(string(data), "new-key-abc") {
+		t.Errorf("expected new Tavily key in config, got: %s", data)
+	}
+	if strings.Contains(string(data), "old-key-xyz") {
+		t.Errorf("old Tavily key should have been replaced, got: %s", data)
+	}
+}
+
+func TestMaskKey(t *testing.T) {
+	cases := []struct {
+		input string
+		want  string
+	}{
+		{"abc", "•••"},
+		{"12345678", "••••••••"},
+		{"tvly-abcdefgh1234", "tvly" + strings.Repeat("•", 9) + "1234"},
+	}
+	for _, tc := range cases {
+		got := maskKey(tc.input)
+		if got != tc.want {
+			t.Errorf("maskKey(%q) = %q, want %q", tc.input, got, tc.want)
+		}
+	}
+}
+
 func TestRun_PullFail_FallbackWritesModel(t *testing.T) {
 	// Server: 200 on /, 500 on /api/pull.
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
